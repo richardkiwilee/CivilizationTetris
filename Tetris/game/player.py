@@ -25,3 +25,13 @@ class Player:
             PlayerResource.Decree.value: 0,
             PlayerResource.Citizen.value: 0
         }
+
+    def ResourceEnough(self, cost: dict) -> bool:
+        for resource in cost:
+            if self.resources[resource] < cost[resource]:
+                return False
+        return True
+
+    def Cost(self, cost: dict):
+        for resource in cost:
+            self.resources[resource] -= cost[resource]

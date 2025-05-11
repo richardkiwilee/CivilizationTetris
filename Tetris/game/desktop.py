@@ -39,14 +39,3 @@ class Desktop:
         self.rows = data['rows']
         self.cols = data['cols']
     
-    def PlaceObject(self, puzzle: Puzzle):
-        pass
-
-    def ActiveObject(self, puzzle: Puzzle):
-        pass
-
-    def UpgradeObject(self, puzzle: Puzzle):
-        pass
-
-    def AttackObject(self, attacker: Puzzle, defender: Puzzle):
-        pass

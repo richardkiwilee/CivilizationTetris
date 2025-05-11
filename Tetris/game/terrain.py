@@ -1,5 +1,26 @@
 from enum import Enum
 
+class Rotate(Enum):
+    Zero = 0
+    One = 1
+    Two = 2
+    Three = 3
+
+def rotate_point(px, py, rotation):
+    if rotation == Rotate.Zero.value:
+        return px, py
+    elif rotation == Rotate.One.value:  # 90度
+        return -py, px
+    elif rotation == Rotate.Two.value:  # 180度
+        return -px, -py
+    elif rotation == Rotate.Three.value:  # 270度
+        return py, -px
+    return px, py
+
+class PuzzleType(Enum):
+    Terrain = 0
+    Building = 1
+
 class Terrain(Enum):
     Building = 0    # 建筑
     Plain = 1       # 平原
@@ -10,6 +31,11 @@ class Terrain(Enum):
     Barren = 6      # 贫瘠
     Fertile = 7     # 肥沃, 同时视为平原、森林、河流
     Urban = 8       # 城市
+
+class Cell:
+    def __init__(self, terrain, owner):
+        self.terrain = terrain
+        self.owner = owner
 
 class BuildingTag(Enum):
     Production = 1          # 生产建筑
@@ -37,16 +63,28 @@ class Shape(Enum):
 class Forces(Enum):
     Normal = 0     # 不受任何克制
     Sword = 1      # 剑
-    Spear = 2      # 矛
-    Heavy = 3      # 斧
-    Arrow = 4      # 箭
+    Axe = 2        # 斧
+    Arrow = 3      # 箭
+    Spear = 4      # 矛
+    Horse = 5      # 马
+    Heavy = 6      # 重装
 
 class Puzzle:
-    def __init__(self, shape: Shape, terrain: Terrain, tags=[]):
+    def __init__(self, _type: PuzzleType, shape: Shape, terrain: Terrain, tags=[]):
+        self.type = _type
         self.shape = shape
         self.terrain = terrain
         self.tags = tags
         self.owner = None
+        self.army = 0
+        self.army_owner = None
+        self.cells = set()
+        self.activeable = False
+        self.place_cost = dict()
+        self.activate_cost = dict()
+        self.upgrade_cost = dict()
+        self.max_level = 0
+        self.level = 0
 
     def Activate(self):
         if self.terrain != Terrain.Building.value:
@@ -58,5 +96,11 @@ class Puzzle:
             return
         pass
 
+    def StartTurn(self):
+        pass
+
     def EndTurn(self):
         pass
+
+    def isBuilding(self):
+        return self.terrain == Terrain.Building.value
