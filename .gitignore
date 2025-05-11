@@ -1,0 +1,12 @@
+.vs
+.git
+bin
+obj
+.user
+.suo
+*/bin
+*/obj/
+build
+dist
+debug
+.env

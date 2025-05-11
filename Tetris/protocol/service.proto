@@ -1,0 +1,30 @@
+
+syntax = "proto3";
+
+package lobby;
+
+service Lobby {
+  rpc Handle (GeneralRequest) returns (GeneralResponse) {}
+  rpc Subscribe (GeneralRequest) returns (stream Broadcast) {}
+}
+
+message GeneralRequest {
+  string sender = 1;
+  string body = 2;
+}
+
+message GeneralResponse {
+  int32 sequence = 1;
+  int32 msgtype = 2;
+  int32 status = 3;
+  string sender = 4;
+  string body = 5;
+}
+
+message Broadcast {
+  int32 sequence = 1;
+  int32 msgtype = 2;
+  int32 status = 3;
+  string sender = 4;
+  string body = 5;
+}

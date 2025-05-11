@@ -1,0 +1,1 @@
+python.exe -mTetris.main host -n host -d -v

@@ -1,0 +1,1 @@
+python.exe -mTetris.main join -d -n player1
