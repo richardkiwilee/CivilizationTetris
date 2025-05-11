@@ -46,6 +46,7 @@ class Puzzle:
         self.shape = shape
         self.terrain = terrain
         self.tags = tags
+        self.owner = None
 
     def Activate(self):
         if self.terrain != Terrain.Building.value:
