@@ -58,6 +58,7 @@ class Shape(Enum):
     Cell = 8        # 1格
     Rectangle6 = 9  # 6格矩形
     Rectangle8 = 10 # 8格矩形
+    Line = 11       # 3格直线
 
 
 class Forces(Enum):
@@ -71,6 +72,7 @@ class Forces(Enum):
 
 class Puzzle:
     def __init__(self, _type: PuzzleType, shape: Shape, terrain: Terrain, tags=[]):
+        self.name = ""
         self.type = _type
         self.shape = shape
         self.terrain = terrain
@@ -85,6 +87,7 @@ class Puzzle:
         self.upgrade_cost = dict()
         self.max_level = 0
         self.level = 0
+        self.effect_range = 0
 
     def Activate(self):
         if self.terrain != Terrain.Building.value:
