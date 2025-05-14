@@ -33,9 +33,11 @@ class Terrain(Enum):
     Urban = 8       # 城市
 
 class Cell:
-    def __init__(self, terrain, owner):
-        self.terrain = terrain
-        self.owner = owner
+    def __init__():
+        self.terrain = None
+        self.owner = None
+        self.puzzle_id = None
+        self.triggered_buildings = set()      # 每个建筑最多对单元格激发一次
 
 class BuildingTag(Enum):
     Production = 1          # 生产建筑
@@ -92,6 +94,8 @@ class Puzzle:
         self.max_level = 0
         self.level = 0
         self.effect_range = 0
+        self.triggered_cells = set()        # 每个单元格一回合最多激发一次
+        self.triggered_buildings = set()    # 每个建筑一回合最多激发一次
 
     def Activate(self):
         if self.terrain != Terrain.Building.value:

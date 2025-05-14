@@ -97,8 +97,112 @@ class Manager:
         if player.ResourceEnough(puzzle.place_cost):
             player.Cost(puzzle.place_cost)
             self.puzzle_objs[puzzle.id] = puzzle
-            self.Desktop.PlaceObject(puzzle)    # TODO
+            for cell in puzzle.cells:
+                # 计算旋转后的相对坐标
+                rx, ry = rotate_point(cell[0], cell[1], puzzle.rotation)
+                # 计算实际坐标
+                ax, ay = x + rx, y + ry
+                # 设置坐标
+                cell = self.Desktop.GetCell(ax, ay)
+                cell.puzzle_id = puzzle.id
+                cell.owner = player.name
+                cell.terrain = puzzle.terrain
+                cell.triggered_buildings = set()
+            # 放置完后 触发效果
+            pass
         return True
+
+    def GetPuzzleCells(self, x, y, puzzle: Puzzle, rotate):
+        # 获得puzzle本身的格子
+        cells = set()
+        for cell in puzzle.cells:
+            rx, ry = rotate_point(cell[0], cell[1], rotate)
+            ax, ay = x + rx, y + ry
+            cells.add((ax, ay))
+        return cells
+
+    def GetRangeCells(self, x, y, puzzle, rotate, n):
+        # 获得n范围内的所有其他格子
+        cells = set()
+        # 对每一个格子计算出range的集合
+        for cell in puzzle.cells:
+            rx, ry = rotate_point(cell[0], cell[1], rotate)
+            ax, ay = x + rx, y + ry
+            for _x in range(n):
+                _y = n - _x
+                cells.add((ax + _x, ay + _y))
+                cells.add((-1 * (ax + _x), -1 * (ay + _y)))
+        cells.difference_update(self.GetPuzzleCells(x, y, puzzle, rotate))
+        return cells
+
+    def GetSameRowCol(self, x, y, puzzle, rotate):
+        # 获得同行同列的所有其他格子
+        cells = set()
+        for cell in puzzle.cells:
+            rx, ry = rotate_point(cell[0], cell[1], rotate)
+            ax, ay = x + rx, y + ry
+            for col in range(0, self.Desktop.cols):
+                cells.add((ax, col))
+            for row in range(0, self.Desktop.rows):
+                cells.add((row, ay))
+        cells.difference_update(self.GetPuzzleCells(x, y, puzzle, rotate))
+        return cells
+
+    def GetSurround(self, x, y, puzzle, rotate):
+        # 获得包围的所有格子
+        cells = self.GetRangeCells(x, y, puzzle, rotate, n=1)
+        return cells
+
+    def GetFillRowCol(self, x, y, puzzle, rotate):
+        # 获得填充行列的所有格子 不排除建筑
+        rows = set()    
+        cols = set()
+        for cell in puzzle.cells:
+            rx, ry = rotate_point(cell[0], cell[1], rotate)
+            ax, ay = x + rx, y + ry
+            rows.add(ax)
+            cols.add(ay)
+        fill = {'row': set(), 'col': set()}
+        for row in rows:
+            for col in range(0, self.Desktop.cols):
+                _cell = self.Desktop.GetCell(row, col)
+                if _cell.terrain is None:
+                    continue
+            fill['row'].add(row)
+        for col in cols:
+            for row in range(0, self.Desktop.rows):
+                _cell = self.Desktop.GetCell(row, col)
+                if _cell.terrain is None:
+                    continue
+            fill['col'].add(col)
+        cells = set()
+        for _ in fill['row']:
+            for col in range(0, self.Desktop.cols):
+                cells.add((_ , col))
+        for _ in fill['col']:
+            for row in range(0, self.Desktop.rows):
+                cells.add((row , _))
+        return cells
+
+    def GetConnectedCells(self, x, y, puzzle, rotate):
+        # 获得连接的所有格子 按地形分类
+        connected = dict()
+        for cell in puzzle.cells:
+            rx, ry = rotate_point(cell[0], cell[1], rotate)
+            ax, ay = x + rx, y + ry
+            _cell = self.Desktop.GetCell(ax, ay)
+            # TODO
+        return connected
+
+    def GetAdjacentCells(self, x, y, puzzle, rotate):
+        # 获得毗邻的格子
+        cells = set()
+        return cells
+
+    def GetAdjacentPuzzle(self, x, y, puzzle, rotate):
+        # 获得毗邻的板块
+        puzzles = set()
+        return puzzles
 
     def ActiveBuilding(self, player: Player, x, y):
         if self.Desktop is None:

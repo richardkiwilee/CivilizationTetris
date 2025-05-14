@@ -664,7 +664,7 @@ class Building_041(Puzzle):
         }
     
     def Activate(self):
-        # 同行或同列的每一个敌建筑 获得15/25/35金币
+        # 同行或同列的每一个敌方建筑 获得15/25/35金币
         pass
 
 class Building_042(Puzzle):
