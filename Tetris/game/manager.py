@@ -6,12 +6,15 @@ from Tetris.game.deck import Deck
 from Tetris.game.terrain import *
 from Tetris.game.player import Player
 
+
 class Manager:
     def __init__(self):
         self.Desktop = None
-        self.puzzles = None
+        self.puzzle_deck = None
         self.setting = dict()
         self.setMapSize(12, 12)
+        self.buildings = dict()
+        self.puzzle_objs = dict()
 
     def setMapSize(self, row, col):
         self.setting['map_row'] = row
@@ -19,13 +22,24 @@ class Manager:
 
     def StartGame(self):
         self.Desktop = Desktop(self.setting['map_row'], self.setting['map_col'])
-        self.puzzles = Deck()
+        self.puzzle_deck = Deck()
 
     def dumpPlayerInfo(self) -> Dict[str, Any]:
         info = dict()
         return info
 
     def GetPuzzle(self, x, y) -> Optional[Puzzle]:
+        if self.Desktop is None:
+            return None
+        cell = self.Desktop.GetCell(x, y)
+        puzzle = self.puzzle_objs.get(cell.puzzle_id)
+        return puzzle
+
+    def SetPuzzle(self, x, y, puzzle: Puzzle, rotate=0):
+        cell = self.Desktop.GetCell(x, y)
+        cell.puzzle_id = puzzle.id
+
+    def GetCell(self, x, y):
         if self.Desktop is None:
             return None
         return self.Desktop.GetCell(x, y)
@@ -82,6 +96,7 @@ class Manager:
         # Try to place the puzzle on the desktop
         if player.ResourceEnough(puzzle.place_cost):
             player.Cost(puzzle.place_cost)
+            self.puzzle_objs[puzzle.id] = puzzle
             self.Desktop.PlaceObject(puzzle)    # TODO
         return True
 

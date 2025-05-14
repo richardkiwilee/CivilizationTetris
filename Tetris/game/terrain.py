@@ -72,6 +72,10 @@ class Forces(Enum):
 
 class Puzzle:
     def __init__(self, _type: PuzzleType, shape: Shape, terrain: Terrain, tags=[]):
+        self.id = 0
+        self.x = 0
+        self.y = 0
+        self.rotation = Rotate.Zero.value
         self.name = ""
         self.type = _type
         self.shape = shape
