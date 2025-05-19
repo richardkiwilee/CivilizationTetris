@@ -42,100 +42,101 @@ class TetrisUI:
         self.clock = pygame.time.Clock()
         self.running = True
         
-        # Key state tracking
-        self.key_states = {
-            pygame.K_w: False,
-            pygame.K_s: False,
-            pygame.K_a: False,
-            pygame.K_d: False,
-            pygame.K_r: False,
-            pygame.K_SPACE: False
-        }
-        self.key_repeat_delay = 150  # ms before key repeat
-        self.key_repeat_interval = 50  # ms between repeats
-        self.last_key_time = {k: 0 for k in self.key_states}
+        # Key repeat settings
+        pygame.key.set_repeat(200, 50)  # Initial delay 200ms, repeat every 50ms
 
     def draw_grid(self):
         for row in range(self.grid_size):
             for col in range(self.grid_size):
-                x = col * (self.cell_size + self.margin)
-                y = row * (self.cell_size + self.margin)
+                # 计算屏幕坐标
+                screen_x = col * (self.cell_size + self.margin)
+                screen_y = row * (self.cell_size + self.margin)
+                
+                # 获取格子内容
                 cell = self.manager.Desktop.GetCell(row, col)
                 
-                # Default color for empty cells
+                # 默认颜色
                 color = self.empty_color
                 
-                # If cell has terrain, use terrain color
+                # 如果有地形，使用地形颜色
                 if cell and cell.terrain:
                     color = self.TERRAIN_COLORS.get(cell.terrain, self.empty_color)
                 
+                # 绘制格子
                 pygame.draw.rect(self.screen, color, 
-                               (x, y, self.cell_size, self.cell_size))
+                               (screen_x, screen_y, self.cell_size, self.cell_size))
+                
+                # 绘制格子边框
+                pygame.draw.rect(self.screen, self.grid_color,
+                               (screen_x, screen_y, self.cell_size, self.cell_size), 1)
 
     def draw_current_puzzle(self, x, y, puzzle, rotate):
         if not puzzle:
             return
             
-        # Get all cells that would be occupied by the puzzle
+        # 获取拼图占用的所有格子
         puzzle_cells = self.manager.GetPuzzleCells(x, y, puzzle, rotate)
         
+        # 检查整个拼图的位置是否有效
+        is_valid = self.manager.Placeable(None, x, y, puzzle, rotate)
+        
+        # 绘制拼图的每个格子
         for px, py in puzzle_cells:
             if 0 <= px < self.grid_size and 0 <= py < self.grid_size:
+                # 计算屏幕坐标
                 screen_x = py * (self.cell_size + self.margin)
                 screen_y = px * (self.cell_size + self.margin)
                 
-                # Check if position is valid
-                is_valid = self.manager.Placeable(None, x, y, puzzle, rotate)
+                # 设置颜色
                 color = self.invalid_color if not is_valid else self.TERRAIN_COLORS.get(puzzle.terrain, self.empty_color)
                 
+                # 绘制格子
                 pygame.draw.rect(self.screen, color,
                                (screen_x, screen_y, self.cell_size, self.cell_size))
+                
+                # 绘制格子边框
+                pygame.draw.rect(self.screen, (255, 255, 255),
+                               (screen_x, screen_y, self.cell_size, self.cell_size), 1)
 
     def handle_keyboard_input(self, current_x, current_y, current_puzzle, current_rotate):
         new_x, new_y, new_rotate = current_x, current_y, current_rotate
         action = None
-        current_time = pygame.time.get_ticks()
 
-        # Process events to update key states
+        # 处理事件
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
                 pygame.quit()
                 sys.exit()
             elif event.type == pygame.KEYDOWN:
-                if event.key in self.key_states:
-                    self.key_states[event.key] = True
-                    self.last_key_time[event.key] = current_time
-            elif event.type == pygame.KEYUP:
-                if event.key in self.key_states:
-                    self.key_states[event.key] = False
+                # 处理按键移动
+                if event.key == pygame.K_w:
+                    new_x -= 1
+                elif event.key == pygame.K_s:
+                    new_x += 1
+                elif event.key == pygame.K_a:
+                    new_y -= 1
+                elif event.key == pygame.K_d:
+                    new_y += 1
+                elif event.key == pygame.K_r:
+                    new_rotate = (new_rotate + 1) % 4
+                elif event.key == pygame.K_SPACE:
+                    action = 'place'
 
-        # Handle key states with repeat delay
-        keys = pygame.key.get_pressed()
-        for key in self.key_states:
-            if keys[key]:
-                time_since_last = current_time - self.last_key_time[key]
-                if time_since_last >= self.key_repeat_delay:
-                    # Reset timer for repeat interval
-                    self.last_key_time[key] = current_time - (self.key_repeat_delay - self.key_repeat_interval)
-                    
-                    # Handle movement
-                    if key == pygame.K_w:
-                        new_x -= 1
-                    elif key == pygame.K_s:
-                        new_x += 1
-                    elif key == pygame.K_a:
-                        new_y -= 1
-                    elif key == pygame.K_d:
-                        new_y += 1
-                    elif key == pygame.K_r:
-                        new_rotate = (new_rotate + 1) % 4
-                    elif key == pygame.K_SPACE:
-                        action = 'place'
-            
-        # Validate new position
-        if not (0 <= new_x < self.grid_size and 0 <= new_y < self.grid_size):
-            new_x, new_y = current_x, current_y
+                # 验证新位置和旋转是否有效
+                if current_puzzle:
+                    # 首先检查是否在网格范围内
+                    if not (0 <= new_x < self.grid_size and 0 <= new_y < self.grid_size):
+                        new_x, new_y = current_x, current_y
+                    else:
+                        # 检查新位置是否可放置
+                        if not self.manager.Placeable(None, new_x, new_y, current_puzzle, new_rotate):
+                            # 如果是旋转导致的无效位置，恢复旋转
+                            if event.key == pygame.K_r:
+                                new_rotate = current_rotate
+                            # 如果是移动导致的无效位置，恢复位置
+                            else:
+                                new_x, new_y = current_x, current_y
             
         return new_x, new_y, new_rotate, action
 
