@@ -191,17 +191,41 @@ class Manager:
             rx, ry = rotate_point(cell[0], cell[1], rotate)
             ax, ay = x + rx, y + ry
             _cell = self.Desktop.GetCell(ax, ay)
-            # TODO
+            if _cell and _cell.terrain:
+                if _cell.terrain not in connected:
+                    connected[_cell.terrain] = set()
+                connected[_cell.terrain].add((ax, ay))
         return connected
 
     def GetAdjacentCells(self, x, y, puzzle, rotate):
         # 获得毗邻的格子
         cells = set()
+        # 获取拼图所有格子的边界
+        for cell in puzzle.cells:
+            rx, ry = rotate_point(cell[0], cell[1], rotate)
+            ax, ay = x + rx, y + ry
+            # 检查上下左右四个方向
+            for dx, dy in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
+                nx, ny = ax + dx, ay + dy
+                adj_cell = self.Desktop.GetCell(nx, ny)
+                if adj_cell is None:
+                    continue
+                cells.add((nx, ny))
+        cells.difference_update(self.GetPuzzleCells(x, y, puzzle, rotate))
         return cells
 
     def GetAdjacentPuzzle(self, x, y, puzzle, rotate):
         # 获得毗邻的板块
         puzzles = set()
+        # 获取所有相邻格子
+        adj_cells = self.GetAdjacentCells(x, y, puzzle, rotate)
+        # 检查每个相邻格子是否属于某个拼图
+        for ax, ay in adj_cells:
+            cell = self.Desktop.GetCell(ax, ay)
+            if cell and cell.puzzle_id is not None:
+                adj_puzzle = self.GetPuzzle(ax, ay)
+                if adj_puzzle:
+                    puzzles.add(adj_puzzle)
         return puzzles
 
     def ActiveBuilding(self, player: Player, x, y):
