@@ -1,22 +1,38 @@
 import pygame
 import random
 import time
+from enum import Enum
 
 # Initialize Pygame
 pygame.init()
 
-# Colors
-BLACK = (0, 0, 0)
-WHITE = (255, 255, 255)
-CYAN = (0, 255, 255)
-YELLOW = (255, 255, 0)
-MAGENTA = (255, 0, 255)
-RED = (255, 0, 0)
-GREEN = (0, 255, 0)
-BLUE = (0, 0, 255)
-ORANGE = (255, 165, 0)
+class Terrain(Enum):
+    Building = 0    # 建筑 黑色
+    Plain = 1       # 平原 浅绿色
+    Forest = 2      # 森林 深绿色
+    River = 3       # 河流 蓝色
+    Farmland = 4    # 农田 金黄色
+    Mountain = 5    # 山地 灰色
+    Barren = 6      # 贫瘠 浅褐色
+    Fertile = 7     # 肥沃, 同时视为平原、森林、河流  白色
+    Urban = 8       # 城市 深棕色
 
-# Game Constants
+
+# Colors
+BLACK = (0, 0, 0)  # Building
+WHITE = (255, 255, 255)
+CREAM = (255, 253, 245)  # 奶白色背景
+LIGHT_GREEN = (144, 238, 144)  # Plain
+DARK_GREEN = (34, 139, 34)  # Forest
+BLUE = (0, 0, 255)  # River
+GOLDEN = (218, 165, 32)  # Farmland
+GRAY = (128, 128, 128)  # Mountain
+BROWN = (139, 69, 19)  # Barren
+PURPLE = (128, 0, 128)  # Fertile
+SILVER = (192, 192, 192)  # Urban
+RED = (255, 0, 0)  # Invalid placement
+
+# Game Constants 
 BLOCK_SIZE = 30
 GRID_WIDTH = 10
 GRID_HEIGHT = 20
@@ -34,7 +50,17 @@ SHAPES = [
     [[0, 1, 1], [1, 1, 0]]   # Z
 ]
 
-COLORS = [CYAN, YELLOW, MAGENTA, ORANGE, BLUE, GREEN, RED]
+TERRAIN_COLORS = {
+    Terrain.Building: BLACK,
+    Terrain.Plain: LIGHT_GREEN,
+    Terrain.Forest: DARK_GREEN,
+    Terrain.River: BLUE,
+    Terrain.Farmland: GOLDEN,
+    Terrain.Mountain: GRAY,
+    Terrain.Barren: BROWN,
+    Terrain.Fertile: PURPLE,
+    Terrain.Urban: SILVER
+}
 
 class Tetris:
     def __init__(self):
@@ -44,21 +70,25 @@ class Tetris:
         self.reset_game()
 
     def reset_game(self):
-        self.grid = [[0 for _ in range(GRID_WIDTH)] for _ in range(GRID_HEIGHT)]
-        self.current_piece = self.new_piece()
+        self.grid = [[{'terrain': None, 'color': None} for _ in range(GRID_WIDTH)] for _ in range(GRID_HEIGHT)]
+        self.current_piece = None
+        self.preview_piece = self.new_piece()
         self.game_over = False
         self.score = 0
         self.level = 1
         self.lines_cleared = 0
 
-
     def new_piece(self):
         # Returns dictionary containing piece information
         shape_idx = random.randint(0, len(SHAPES) - 1)
+        terrain = random.choice(list(Terrain))
+        new_shape = SHAPES[shape_idx]
         return {
-            'shape': SHAPES[shape_idx],
-            'color': COLORS[shape_idx],
-            'x': GRID_WIDTH // 2 - len(SHAPES[shape_idx][0]) // 2,
+            'shape': new_shape,
+            'terrain': terrain,
+            'color': TERRAIN_COLORS[terrain],
+            'is_valid': True,
+            'x': GRID_WIDTH // 2 - len(new_shape[0]) // 2,
             'y': 0
         }
 
@@ -68,7 +98,7 @@ class Tetris:
                 if cell:
                     if not (0 <= x + j < GRID_WIDTH and
                            y + i < GRID_HEIGHT and
-                           (y + i < 0 or self.grid[y + i][x + j] == 0)):
+                           (y + i < 0 or self.grid[y + i][x + j]['terrain'] is None)):
                         return False
         return True
 
@@ -83,40 +113,76 @@ class Tetris:
         # Just increment score when piece is placed
         self.score += 10
 
-    def lock_piece(self, piece):
+    def lock_piece(self):
+        if not self.check_valid_placement(self.preview_piece) or self.check_overlap(self.preview_piece):
+            return
+        
+        for i, row in enumerate(self.preview_piece['shape']):
+            for j, cell in enumerate(row):
+                if cell:
+                    if self.preview_piece['y'] + i >= 0:
+                        self.grid[self.preview_piece['y'] + i][self.preview_piece['x'] + j] = {
+                            'terrain': self.preview_piece['terrain'],
+                            'color': self.preview_piece['color']
+                        }
+        
+        self.update_score()
+        self.preview_piece = self.new_piece()
+        if not self.check_valid_placement(self.preview_piece):
+            self.game_over = True
+
+    def check_valid_placement(self, piece):
+        # 只检查是否在游戏区域内，不检查重叠
         for i, row in enumerate(piece['shape']):
             for j, cell in enumerate(row):
                 if cell:
-                    if piece['y'] + i >= 0:
-                        self.grid[piece['y'] + i][piece['x'] + j] = piece['color']
-        self.update_score()
-        self.current_piece = self.new_piece()
-        if not self.valid_move(self.current_piece, self.current_piece['x'], self.current_piece['y']):
-            self.game_over = True
+                    x, y = piece['x'] + j, piece['y'] + i
+                    if not (0 <= x < GRID_WIDTH and y < GRID_HEIGHT):
+                        return False
+        return True
+    
+    def check_overlap(self, piece):
+        # 检查是否与已放置的方块重叠
+        for i, row in enumerate(piece['shape']):
+            for j, cell in enumerate(row):
+                if cell:
+                    x, y = piece['x'] + j, piece['y'] + i
+                    if y >= 0 and self.grid[y][x]['terrain'] is not None:
+                        return True
+        return False
+
+    def create_transparent_surface(self, color, alpha=128):
+        surface = pygame.Surface((BLOCK_SIZE - 1, BLOCK_SIZE - 1))
+        surface.fill(color)
+        surface.set_alpha(alpha)
+        return surface
 
     def draw(self):
-        self.screen.fill(BLACK)
+        self.screen.fill(CREAM)  # 使用奶白色背景
         
         # Draw grid
         for i in range(GRID_HEIGHT):
             for j in range(GRID_WIDTH):
                 pygame.draw.rect(self.screen, WHITE,
                                [j * BLOCK_SIZE, i * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE], 1)
-                if self.grid[i][j]:
-                    pygame.draw.rect(self.screen, self.grid[i][j],
+                if self.grid[i][j]['terrain'] is not None:
+                    pygame.draw.rect(self.screen, self.grid[i][j]['color'],
                                    [j * BLOCK_SIZE, i * BLOCK_SIZE, BLOCK_SIZE - 1, BLOCK_SIZE - 1])
 
-        # Draw current piece
-        if self.current_piece:
-            for i, row in enumerate(self.current_piece['shape']):
+        # Draw preview piece
+        if self.preview_piece:
+            is_valid = self.check_valid_placement(self.preview_piece)
+            has_overlap = self.check_overlap(self.preview_piece)
+            preview_color = RED if has_overlap else self.preview_piece['color']
+            preview_surface = self.create_transparent_surface(preview_color, alpha=160)
+            
+            for i, row in enumerate(self.preview_piece['shape']):
                 for j, cell in enumerate(row):
                     if cell:
-                        pygame.draw.rect(
-                            self.screen,
-                            self.current_piece['color'],
-                            [(self.current_piece['x'] + j) * BLOCK_SIZE,
-                             (self.current_piece['y'] + i) * BLOCK_SIZE,
-                             BLOCK_SIZE - 1, BLOCK_SIZE - 1]
+                        self.screen.blit(
+                            preview_surface,
+                            ((self.preview_piece['x'] + j) * BLOCK_SIZE,
+                             (self.preview_piece['y'] + i) * BLOCK_SIZE)
                         )
 
         # Draw score and level
@@ -144,21 +210,27 @@ class Tetris:
                 if event.type == pygame.KEYDOWN:
                     if not self.game_over:
                         if event.key == pygame.K_a:
-                            if self.valid_move(self.current_piece, self.current_piece['x'] - 1, self.current_piece['y']):
-                                self.current_piece['x'] -= 1
+                            new_x = self.preview_piece['x'] - 1
+                            if self.check_valid_placement({**self.preview_piece, 'x': new_x}):
+                                self.preview_piece['x'] = new_x
                         elif event.key == pygame.K_d:
-                            if self.valid_move(self.current_piece, self.current_piece['x'] + 1, self.current_piece['y']):
-                                self.current_piece['x'] += 1
+                            new_x = self.preview_piece['x'] + 1
+                            if self.check_valid_placement({**self.preview_piece, 'x': new_x}):
+                                self.preview_piece['x'] = new_x
                         elif event.key == pygame.K_s:
-                            if self.valid_move(self.current_piece, self.current_piece['x'], self.current_piece['y'] + 1):
-                                self.current_piece['y'] += 1
+                            new_y = self.preview_piece['y'] + 1
+                            if self.check_valid_placement({**self.preview_piece, 'y': new_y}):
+                                self.preview_piece['y'] = new_y
                         elif event.key == pygame.K_w:
-                            if self.valid_move(self.current_piece, self.current_piece['x'], self.current_piece['y'] - 1):
-                                self.current_piece['y'] -= 1
+                            new_y = self.preview_piece['y'] - 1
+                            if self.check_valid_placement({**self.preview_piece, 'y': new_y}):
+                                self.preview_piece['y'] = new_y
                         elif event.key == pygame.K_r:
-                            self.rotate_piece(self.current_piece)
+                            new_shape = list(zip(*self.preview_piece['shape'][::-1]))
+                            if self.check_valid_placement({**self.preview_piece, 'shape': new_shape}):
+                                self.preview_piece['shape'] = new_shape
                         elif event.key == pygame.K_SPACE:
-                            self.lock_piece(self.current_piece)
+                            self.lock_piece()
                     
                     if event.key == pygame.K_r and self.game_over:
                         self.reset_game()
