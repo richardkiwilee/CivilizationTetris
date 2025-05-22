@@ -6,6 +6,21 @@ from enum import Enum
 # Initialize Pygame
 pygame.init()
 
+# Load terrain images
+def load_terrain_images():
+    images = {}
+    for terrain in Terrain:
+        try:
+            image_path = f'Asset/terrain/{terrain.name.lower()}.png'
+            img = pygame.image.load(image_path)
+            # Scale image to block size
+            img = pygame.transform.scale(img, (BLOCK_SIZE - 1, BLOCK_SIZE - 1))
+            images[terrain] = img
+        except pygame.error:
+            print(f'Warning: Could not load image for {terrain.name}')
+            images[terrain] = None
+    return images
+
 class Terrain(Enum):
     Building = 0    # 建筑 黑色
     Plain = 1       # 平原 浅绿色
@@ -69,6 +84,7 @@ class Tetris:
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         pygame.display.set_caption('Tetris')
         self.clock = pygame.time.Clock()
+        self.terrain_images = load_terrain_images()
         self.toolbar_pieces = self.generate_toolbar_pieces()
         self.selected_piece = None
         self.mouse_pos = (0, 0)
@@ -200,11 +216,18 @@ class Tetris:
                         return True
         return False
 
-    def create_transparent_surface(self, color, alpha=128):
-        surface = pygame.Surface((BLOCK_SIZE - 1, BLOCK_SIZE - 1))
-        surface.fill(color)
-        surface.set_alpha(alpha)
-        return surface
+    def create_transparent_surface(self, terrain, alpha=128):
+        if self.terrain_images[terrain] is not None:
+            # Create a copy of the image and set its alpha
+            surface = self.terrain_images[terrain].copy()
+            surface.set_alpha(alpha)
+            return surface
+        else:
+            # Fallback to colored rectangle if image is not available
+            surface = pygame.Surface((BLOCK_SIZE - 1, BLOCK_SIZE - 1))
+            surface.fill(TERRAIN_COLORS[terrain])
+            surface.set_alpha(alpha)
+            return surface
 
     def draw(self):
         self.screen.fill(CREAM)  # 使用奶白色背景
@@ -219,8 +242,13 @@ class Tetris:
                 pygame.draw.rect(self.screen, WHITE,
                                [j * BLOCK_SIZE, i * BLOCK_SIZE + PLAYER_BAR_HEIGHT, BLOCK_SIZE, BLOCK_SIZE], 1)
                 if self.grid[i][j]['terrain'] is not None:
-                    pygame.draw.rect(self.screen, self.grid[i][j]['color'],
-                                   [j * BLOCK_SIZE, i * BLOCK_SIZE + PLAYER_BAR_HEIGHT, BLOCK_SIZE - 1, BLOCK_SIZE - 1])
+                    terrain = self.grid[i][j]['terrain']
+                    if self.terrain_images[terrain] is not None:
+                        self.screen.blit(self.terrain_images[terrain],
+                                        (j * BLOCK_SIZE, i * BLOCK_SIZE + PLAYER_BAR_HEIGHT))
+                    else:
+                        pygame.draw.rect(self.screen, TERRAIN_COLORS[terrain],
+                                       [j * BLOCK_SIZE, i * BLOCK_SIZE + PLAYER_BAR_HEIGHT, BLOCK_SIZE - 1, BLOCK_SIZE - 1])
 
         # Draw toolbar background
         toolbar_y = PLAYER_BAR_HEIGHT + GRID_HEIGHT * BLOCK_SIZE
@@ -236,8 +264,12 @@ class Tetris:
             for i, row in enumerate(piece['shape']):
                 for j, cell in enumerate(row):
                     if cell:
-                        pygame.draw.rect(self.screen, piece['color'],
-                                       [x + j * BLOCK_SIZE, y + i * BLOCK_SIZE, BLOCK_SIZE - 1, BLOCK_SIZE - 1])
+                        if self.terrain_images[piece['terrain']] is not None:
+                            self.screen.blit(self.terrain_images[piece['terrain']],
+                                            (x + j * BLOCK_SIZE, y + i * BLOCK_SIZE))
+                        else:
+                            pygame.draw.rect(self.screen, piece['color'],
+                                           [x + j * BLOCK_SIZE, y + i * BLOCK_SIZE, BLOCK_SIZE - 1, BLOCK_SIZE - 1])
 
         # Draw selected piece following mouse if exists
         if self.selected_piece and self.is_mouse_in_grid(self.mouse_pos):
@@ -248,8 +280,13 @@ class Tetris:
                 'y': grid_y
             }
             is_valid = self.check_valid_placement(preview) and not self.check_overlap(preview)
-            preview_color = self.selected_piece['color'] if is_valid else RED
-            preview_surface = self.create_transparent_surface(preview_color, alpha=160)
+            if is_valid:
+                preview_surface = self.create_transparent_surface(self.selected_piece['terrain'], alpha=160)
+            else:
+                # For invalid placement, use red rectangle
+                preview_surface = pygame.Surface((BLOCK_SIZE - 1, BLOCK_SIZE - 1))
+                preview_surface.fill(RED)
+                preview_surface.set_alpha(160)
             
             for i, row in enumerate(self.selected_piece['shape']):
                 for j, cell in enumerate(row):
@@ -290,25 +327,36 @@ class Tetris:
                     if event.button == 1:  # Left click
                         if self.is_mouse_in_toolbar(self.mouse_pos):
                             # Try to select a piece from toolbar
-                            toolbar_y = PLAYER_BAR_HEIGHT + GRID_HEIGHT * BLOCK_SIZE
                             piece_spacing = SCREEN_WIDTH // (len(self.toolbar_pieces) + 1)
-                            clicked_idx = int(self.mouse_pos[0] / piece_spacing)
-                            if 0 <= clicked_idx < len(self.toolbar_pieces):
-                                self.selected_piece = self.toolbar_pieces[clicked_idx]
+                            # Calculate the center positions of each piece
+                            for idx, piece in enumerate(self.toolbar_pieces):
+                                piece_center_x = piece_spacing * (idx + 1)
+                                piece_width = len(piece['shape'][0]) * BLOCK_SIZE
+                                piece_x = piece_center_x - piece_width // 2
+                                # Check if click is within piece bounds
+                                if piece_x <= self.mouse_pos[0] < piece_x + piece_width:
+                                    self.selected_piece = {
+                                        **self.toolbar_pieces[idx],
+                                        'toolbar_idx': idx  # Store the index for later
+                                    }
+                                    break
                         elif self.is_mouse_in_grid(self.mouse_pos) and self.selected_piece:
                             # Try to place the selected piece
                             grid_x, grid_y = self.get_grid_pos_from_mouse(self.mouse_pos)
                             preview = {
-                                **self.selected_piece,
+                                'shape': self.selected_piece['shape'],
+                                'terrain': self.selected_piece['terrain'],
+                                'color': self.selected_piece['color'],
                                 'x': grid_x,
                                 'y': grid_y
                             }
                             if self.check_valid_placement(preview) and not self.check_overlap(preview):
                                 self.preview_piece = preview
                                 self.lock_piece()
-                                self.selected_piece = None
                                 # Replace the used piece with a new random one
-                                self.toolbar_pieces[clicked_idx] = self.new_piece()
+                                toolbar_idx = self.selected_piece['toolbar_idx']
+                                self.toolbar_pieces[toolbar_idx] = self.new_piece()
+                                self.selected_piece = None
                     
                     elif event.button == 3:  # Right click
                         # Cancel selection
