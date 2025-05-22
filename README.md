@@ -48,3 +48,10 @@
 ## 关于兵力
 不同的兵种之间具有克制效果。如果存在克制关系，克制方2兵力可以击败被克制方3兵力。  
 发动进攻时，需要指定经过的路线，根据路线的选择，进攻方的兵力将会收到影响。  
+
+
+### godot AI token
+https://app.gamedevassistant.com/profile  
+
+### godot cpp build
+scons platform=windows use_mingw=yes  

@@ -6,3 +6,4 @@ pywin32
 Cython==0.29.32
 setuptools==59.6.0
 rich~=12.6.0
+scons
