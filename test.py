@@ -37,8 +37,9 @@ BLOCK_SIZE = 30
 GRID_WIDTH = 26
 GRID_HEIGHT = 26
 PLAYER_BAR_HEIGHT = 50  # Height of the player score bar
+TOOLBAR_HEIGHT = 100  # Height of the bottom toolbar
 SCREEN_WIDTH = BLOCK_SIZE * (GRID_WIDTH + 8)  # Extra space for next piece and score
-SCREEN_HEIGHT = PLAYER_BAR_HEIGHT + BLOCK_SIZE * GRID_HEIGHT
+SCREEN_HEIGHT = PLAYER_BAR_HEIGHT + BLOCK_SIZE * GRID_HEIGHT + TOOLBAR_HEIGHT
 
 # Tetromino shapes
 SHAPES = [
@@ -68,16 +69,55 @@ class Tetris:
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         pygame.display.set_caption('Tetris')
         self.clock = pygame.time.Clock()
+        self.toolbar_pieces = self.generate_toolbar_pieces()
+        self.selected_piece = None
+        self.mouse_pos = (0, 0)
         self.reset_game()
 
     def reset_game(self):
         self.grid = [[{'terrain': None, 'color': None} for _ in range(GRID_WIDTH)] for _ in range(GRID_HEIGHT)]
         self.current_piece = None
-        self.preview_piece = self.new_piece()
+        self.preview_piece = None
         self.game_over = False
         self.score = 0
         self.level = 1
         self.lines_cleared = 0
+        self.toolbar_pieces = self.generate_toolbar_pieces()
+        self.selected_piece = None
+
+    def generate_toolbar_pieces(self):
+        # Generate 5 random pieces for the toolbar
+        pieces = []
+        for _ in range(5):
+            shape_idx = random.randint(0, len(SHAPES) - 1)
+            terrain = random.choice(list(Terrain))
+            pieces.append({
+                'shape': SHAPES[shape_idx],
+                'terrain': terrain,
+                'color': TERRAIN_COLORS[terrain],
+                'is_valid': True
+            })
+        return pieces
+
+    def get_grid_pos_from_mouse(self, mouse_pos):
+        # Convert mouse position to grid position
+        x, y = mouse_pos
+        grid_x = (x // BLOCK_SIZE)
+        grid_y = ((y - PLAYER_BAR_HEIGHT) // BLOCK_SIZE)
+        return grid_x, grid_y
+
+    def is_mouse_in_grid(self, mouse_pos):
+        # Check if mouse is in the game grid area
+        x, y = mouse_pos
+        return (0 <= x < GRID_WIDTH * BLOCK_SIZE and
+                PLAYER_BAR_HEIGHT <= y < PLAYER_BAR_HEIGHT + GRID_HEIGHT * BLOCK_SIZE)
+
+    def is_mouse_in_toolbar(self, mouse_pos):
+        # Check if mouse is in the toolbar area
+        x, y = mouse_pos
+        toolbar_y = PLAYER_BAR_HEIGHT + GRID_HEIGHT * BLOCK_SIZE
+        return (0 <= x < SCREEN_WIDTH and
+                toolbar_y <= y < toolbar_y + TOOLBAR_HEIGHT)
 
     def new_piece(self):
         # Returns dictionary containing piece information
@@ -108,8 +148,14 @@ class Tetris:
     def rotate_piece(self, piece):
         # Create new rotated shape
         new_shape = list(zip(*piece['shape'][::-1]))
-        if self.valid_move({'shape': new_shape, 'x': piece['x'], 'y': piece['y']},
-                          piece['x'], piece['y']):
+        
+        # If piece is selected and mouse is in grid, check if rotation is valid at current mouse position
+        if self.selected_piece and self.is_mouse_in_grid(self.mouse_pos):
+            grid_x, grid_y = self.get_grid_pos_from_mouse(self.mouse_pos)
+            if self.valid_move({'shape': new_shape, 'x': grid_x, 'y': grid_y}, grid_x, grid_y):
+                piece['shape'] = new_shape
+        else:
+            # For pieces in toolbar, always allow rotation
             piece['shape'] = new_shape
 
     def update_score(self):
@@ -176,20 +222,42 @@ class Tetris:
                     pygame.draw.rect(self.screen, self.grid[i][j]['color'],
                                    [j * BLOCK_SIZE, i * BLOCK_SIZE + PLAYER_BAR_HEIGHT, BLOCK_SIZE - 1, BLOCK_SIZE - 1])
 
-        # Draw preview piece
-        if self.preview_piece:
-            is_valid = self.check_valid_placement(self.preview_piece)
-            has_overlap = self.check_overlap(self.preview_piece)
-            preview_color = RED if has_overlap else self.preview_piece['color']
+        # Draw toolbar background
+        toolbar_y = PLAYER_BAR_HEIGHT + GRID_HEIGHT * BLOCK_SIZE
+        pygame.draw.rect(self.screen, WHITE, [0, toolbar_y, SCREEN_WIDTH, TOOLBAR_HEIGHT])
+        pygame.draw.line(self.screen, BLACK, (0, toolbar_y), (SCREEN_WIDTH, toolbar_y), 2)
+
+        # Draw toolbar pieces
+        piece_spacing = SCREEN_WIDTH // (len(self.toolbar_pieces) + 1)
+        for idx, piece in enumerate(self.toolbar_pieces):
+            x = piece_spacing * (idx + 1) - (len(piece['shape'][0]) * BLOCK_SIZE) // 2
+            y = toolbar_y + (TOOLBAR_HEIGHT - len(piece['shape']) * BLOCK_SIZE) // 2
+            
+            for i, row in enumerate(piece['shape']):
+                for j, cell in enumerate(row):
+                    if cell:
+                        pygame.draw.rect(self.screen, piece['color'],
+                                       [x + j * BLOCK_SIZE, y + i * BLOCK_SIZE, BLOCK_SIZE - 1, BLOCK_SIZE - 1])
+
+        # Draw selected piece following mouse if exists
+        if self.selected_piece and self.is_mouse_in_grid(self.mouse_pos):
+            grid_x, grid_y = self.get_grid_pos_from_mouse(self.mouse_pos)
+            preview = {
+                **self.selected_piece,
+                'x': grid_x,
+                'y': grid_y
+            }
+            is_valid = self.check_valid_placement(preview) and not self.check_overlap(preview)
+            preview_color = self.selected_piece['color'] if is_valid else RED
             preview_surface = self.create_transparent_surface(preview_color, alpha=160)
             
-            for i, row in enumerate(self.preview_piece['shape']):
+            for i, row in enumerate(self.selected_piece['shape']):
                 for j, cell in enumerate(row):
                     if cell:
                         self.screen.blit(
                             preview_surface,
-                            ((self.preview_piece['x'] + j) * BLOCK_SIZE,
-                             (self.preview_piece['y'] + i) * BLOCK_SIZE + PLAYER_BAR_HEIGHT)
+                            ((grid_x + j) * BLOCK_SIZE,
+                             (grid_y + i) * BLOCK_SIZE + PLAYER_BAR_HEIGHT)
                         )
 
         # Draw score and level
@@ -210,43 +278,46 @@ class Tetris:
     def run(self):
         while True:
             self.clock.tick(30)
+            self.mouse_pos = pygame.mouse.get_pos()
+            
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     return
-                # Handle single-press keys (WASD and R)
-                if event.type == pygame.KEYDOWN and not self.game_over:
-                    if event.key == pygame.K_a:
-                        if self.check_valid_placement({**self.preview_piece, 'x': self.preview_piece['x'] - 1}):
-                            self.preview_piece['x'] -= 1
-                    elif event.key == pygame.K_d:
-                        if self.check_valid_placement({**self.preview_piece, 'x': self.preview_piece['x'] + 1}):
-                            self.preview_piece['x'] += 1
-                    elif event.key == pygame.K_s:
-                        if self.check_valid_placement({**self.preview_piece, 'y': self.preview_piece['y'] + 1}):
-                            self.preview_piece['y'] += 1
-                    elif event.key == pygame.K_w:
-                        if self.check_valid_placement({**self.preview_piece, 'y': self.preview_piece['y'] - 1}):
-                            self.preview_piece['y'] -= 1
-                    elif event.key == pygame.K_r:
-                        self.rotate_piece(self.preview_piece)
-                    elif event.key == pygame.K_SPACE:
-                        self.lock_piece()
-                elif event.type == pygame.KEYDOWN and event.key == pygame.K_r and self.game_over:
-                    self.reset_game()
 
-            # Handle continuous movement with arrow keys
-            if not self.game_over:
-                keys = pygame.key.get_pressed()
-                if keys[pygame.K_LEFT]:
-                    if self.check_valid_placement({**self.preview_piece, 'x': self.preview_piece['x'] - 1}):
-                        self.preview_piece['x'] -= 1
-                if keys[pygame.K_RIGHT]:
-                    if self.check_valid_placement({**self.preview_piece, 'x': self.preview_piece['x'] + 1}):
-                        self.preview_piece['x'] += 1
-                if keys[pygame.K_DOWN]:
-                    if self.check_valid_placement({**self.preview_piece, 'y': self.preview_piece['y'] + 1}):
-                        self.preview_piece['y'] += 1
+                # Handle mouse clicks
+                elif event.type == pygame.MOUSEBUTTONDOWN and not self.game_over:
+                    if event.button == 1:  # Left click
+                        if self.is_mouse_in_toolbar(self.mouse_pos):
+                            # Try to select a piece from toolbar
+                            toolbar_y = PLAYER_BAR_HEIGHT + GRID_HEIGHT * BLOCK_SIZE
+                            piece_spacing = SCREEN_WIDTH // (len(self.toolbar_pieces) + 1)
+                            clicked_idx = int(self.mouse_pos[0] / piece_spacing)
+                            if 0 <= clicked_idx < len(self.toolbar_pieces):
+                                self.selected_piece = self.toolbar_pieces[clicked_idx]
+                        elif self.is_mouse_in_grid(self.mouse_pos) and self.selected_piece:
+                            # Try to place the selected piece
+                            grid_x, grid_y = self.get_grid_pos_from_mouse(self.mouse_pos)
+                            preview = {
+                                **self.selected_piece,
+                                'x': grid_x,
+                                'y': grid_y
+                            }
+                            if self.check_valid_placement(preview) and not self.check_overlap(preview):
+                                self.preview_piece = preview
+                                self.lock_piece()
+                                self.selected_piece = None
+                                # Replace the used piece with a new random one
+                                self.toolbar_pieces[clicked_idx] = self.new_piece()
+                    
+                    elif event.button == 3:  # Right click
+                        # Cancel selection
+                        self.selected_piece = None
+                
+                # Handle mouse wheel for rotation of selected piece
+                elif event.type == pygame.MOUSEWHEEL and not self.game_over and self.selected_piece:
+                    if event.y != 0:  # y > 0 is scroll up, y < 0 is scroll down
+                        self.rotate_piece(self.selected_piece)
 
             self.draw()
 
