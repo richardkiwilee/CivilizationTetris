@@ -34,10 +34,11 @@ RED = (255, 0, 0)  # Invalid placement
 
 # Game Constants 
 BLOCK_SIZE = 30
-GRID_WIDTH = 10
-GRID_HEIGHT = 20
+GRID_WIDTH = 26
+GRID_HEIGHT = 26
+PLAYER_BAR_HEIGHT = 50  # Height of the player score bar
 SCREEN_WIDTH = BLOCK_SIZE * (GRID_WIDTH + 8)  # Extra space for next piece and score
-SCREEN_HEIGHT = BLOCK_SIZE * GRID_HEIGHT
+SCREEN_HEIGHT = PLAYER_BAR_HEIGHT + BLOCK_SIZE * GRID_HEIGHT
 
 # Tetromino shapes
 SHAPES = [
@@ -96,9 +97,11 @@ class Tetris:
         for i, row in enumerate(piece['shape']):
             for j, cell in enumerate(row):
                 if cell:
-                    if not (0 <= x + j < GRID_WIDTH and
-                           y + i < GRID_HEIGHT and
-                           (y + i < 0 or self.grid[y + i][x + j]['terrain'] is None)):
+                    # Check if the piece would be outside the boundaries
+                    if not (0 <= x + j < GRID_WIDTH and 0 <= y + i < GRID_HEIGHT):
+                        return False
+                    # Check if the position is already occupied
+                    if self.grid[y + i][x + j]['terrain'] is not None:
                         return False
         return True
 
@@ -132,12 +135,12 @@ class Tetris:
             self.game_over = True
 
     def check_valid_placement(self, piece):
-        # 只检查是否在游戏区域内，不检查重叠
+        # 检查是否在游戏区域内，包括上边界
         for i, row in enumerate(piece['shape']):
             for j, cell in enumerate(row):
                 if cell:
                     x, y = piece['x'] + j, piece['y'] + i
-                    if not (0 <= x < GRID_WIDTH and y < GRID_HEIGHT):
+                    if not (0 <= x < GRID_WIDTH and 0 <= y < GRID_HEIGHT):
                         return False
         return True
     
@@ -160,14 +163,18 @@ class Tetris:
     def draw(self):
         self.screen.fill(CREAM)  # 使用奶白色背景
         
+        # Draw player score bar
+        pygame.draw.rect(self.screen, WHITE, [0, 0, SCREEN_WIDTH, PLAYER_BAR_HEIGHT])
+        pygame.draw.line(self.screen, BLACK, (0, PLAYER_BAR_HEIGHT), (SCREEN_WIDTH, PLAYER_BAR_HEIGHT), 2)
+        
         # Draw grid
         for i in range(GRID_HEIGHT):
             for j in range(GRID_WIDTH):
                 pygame.draw.rect(self.screen, WHITE,
-                               [j * BLOCK_SIZE, i * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE], 1)
+                               [j * BLOCK_SIZE, i * BLOCK_SIZE + PLAYER_BAR_HEIGHT, BLOCK_SIZE, BLOCK_SIZE], 1)
                 if self.grid[i][j]['terrain'] is not None:
                     pygame.draw.rect(self.screen, self.grid[i][j]['color'],
-                                   [j * BLOCK_SIZE, i * BLOCK_SIZE, BLOCK_SIZE - 1, BLOCK_SIZE - 1])
+                                   [j * BLOCK_SIZE, i * BLOCK_SIZE + PLAYER_BAR_HEIGHT, BLOCK_SIZE - 1, BLOCK_SIZE - 1])
 
         # Draw preview piece
         if self.preview_piece:
@@ -182,13 +189,13 @@ class Tetris:
                         self.screen.blit(
                             preview_surface,
                             ((self.preview_piece['x'] + j) * BLOCK_SIZE,
-                             (self.preview_piece['y'] + i) * BLOCK_SIZE)
+                             (self.preview_piece['y'] + i) * BLOCK_SIZE + PLAYER_BAR_HEIGHT)
                         )
 
         # Draw score and level
         font = pygame.font.Font(None, 36)
-        score_text = font.render(f'Score: {self.score}', True, WHITE)
-        level_text = font.render(f'Level: {self.level}', True, WHITE)
+        score_text = font.render(f'Score: {self.score}', True, BLACK)
+        level_text = font.render(f'Level: {self.level}', True, BLACK)
         self.screen.blit(score_text, (GRID_WIDTH * BLOCK_SIZE + 10, 20))
         self.screen.blit(level_text, (GRID_WIDTH * BLOCK_SIZE + 10, 60))
 
@@ -202,41 +209,46 @@ class Tetris:
 
     def run(self):
         while True:
+            self.clock.tick(30)
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     return
-                
-                if event.type == pygame.KEYDOWN:
-                    if not self.game_over:
-                        if event.key == pygame.K_a:
-                            new_x = self.preview_piece['x'] - 1
-                            if self.check_valid_placement({**self.preview_piece, 'x': new_x}):
-                                self.preview_piece['x'] = new_x
-                        elif event.key == pygame.K_d:
-                            new_x = self.preview_piece['x'] + 1
-                            if self.check_valid_placement({**self.preview_piece, 'x': new_x}):
-                                self.preview_piece['x'] = new_x
-                        elif event.key == pygame.K_s:
-                            new_y = self.preview_piece['y'] + 1
-                            if self.check_valid_placement({**self.preview_piece, 'y': new_y}):
-                                self.preview_piece['y'] = new_y
-                        elif event.key == pygame.K_w:
-                            new_y = self.preview_piece['y'] - 1
-                            if self.check_valid_placement({**self.preview_piece, 'y': new_y}):
-                                self.preview_piece['y'] = new_y
-                        elif event.key == pygame.K_r:
-                            new_shape = list(zip(*self.preview_piece['shape'][::-1]))
-                            if self.check_valid_placement({**self.preview_piece, 'shape': new_shape}):
-                                self.preview_piece['shape'] = new_shape
-                        elif event.key == pygame.K_SPACE:
-                            self.lock_piece()
-                    
-                    if event.key == pygame.K_r and self.game_over:
-                        self.reset_game()
+                # Handle single-press keys (WASD and R)
+                if event.type == pygame.KEYDOWN and not self.game_over:
+                    if event.key == pygame.K_a:
+                        if self.check_valid_placement({**self.preview_piece, 'x': self.preview_piece['x'] - 1}):
+                            self.preview_piece['x'] -= 1
+                    elif event.key == pygame.K_d:
+                        if self.check_valid_placement({**self.preview_piece, 'x': self.preview_piece['x'] + 1}):
+                            self.preview_piece['x'] += 1
+                    elif event.key == pygame.K_s:
+                        if self.check_valid_placement({**self.preview_piece, 'y': self.preview_piece['y'] + 1}):
+                            self.preview_piece['y'] += 1
+                    elif event.key == pygame.K_w:
+                        if self.check_valid_placement({**self.preview_piece, 'y': self.preview_piece['y'] - 1}):
+                            self.preview_piece['y'] -= 1
+                    elif event.key == pygame.K_r:
+                        self.rotate_piece(self.preview_piece)
+                    elif event.key == pygame.K_SPACE:
+                        self.lock_piece()
+                elif event.type == pygame.KEYDOWN and event.key == pygame.K_r and self.game_over:
+                    self.reset_game()
+
+            # Handle continuous movement with arrow keys
+            if not self.game_over:
+                keys = pygame.key.get_pressed()
+                if keys[pygame.K_LEFT]:
+                    if self.check_valid_placement({**self.preview_piece, 'x': self.preview_piece['x'] - 1}):
+                        self.preview_piece['x'] -= 1
+                if keys[pygame.K_RIGHT]:
+                    if self.check_valid_placement({**self.preview_piece, 'x': self.preview_piece['x'] + 1}):
+                        self.preview_piece['x'] += 1
+                if keys[pygame.K_DOWN]:
+                    if self.check_valid_placement({**self.preview_piece, 'y': self.preview_piece['y'] + 1}):
+                        self.preview_piece['y'] += 1
 
             self.draw()
-            self.clock.tick(60)
 
 if __name__ == '__main__':
     game = Tetris()
