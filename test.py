@@ -30,7 +30,7 @@ def load_terrain_images():
         try:
             # 将枚举名转换为文件名格式
             terrain_name = terrain.name.lower()
-            image_path = f'Asset/TerrainsTypes/icon_{terrain_name}.png'
+            image_path = f'Asset/Icons/TerrainsTypes/icon_{terrain_name}.png'
             img = pygame.image.load(image_path)
             
             # Scale image to fit block size while maintaining aspect ratio
@@ -434,6 +434,10 @@ class Tetris:
                     elif event.button == 3:  # Right click
                         if self.selected_piece:
                             self.rotate_piece(self.selected_piece)
+                elif event.type == pygame.MOUSEWHEEL and not self.game_over:
+                    if self.selected_piece:
+                        # 滚轮向上或向下都会触发旋转
+                        self.rotate_piece(self.selected_piece)
 
             # Update tooltip visibility
             if self.hover_piece and not self.show_tooltip:
