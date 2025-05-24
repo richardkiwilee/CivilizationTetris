@@ -2,50 +2,57 @@ import pygame
 import random
 import time
 from enum import Enum
+from typing import Optional, Dict, Any
 
 # Initialize Pygame
 pygame.init()
+
+# Basic colors for UI
+WHITE = (255, 255, 255)  # 玩家信息栏背景
+BLACK = (0, 0, 0)    # 文字颜色
+CREAM = (255, 253, 245)  # 游戏区域背景色
+RED = (255, 0, 0)    # 无效放置提示
+
+class Terrain(Enum):
+    BUILDING = 0      # 建筑
+    FIELD = 1         # 农田
+    FOREST = 2        # 森林
+    MOUNTAIN = 3      # 山地
+    NEIGHBORHOOD = 4   # 社区
+    PLAIN = 5         # 平原
+    RIVER = 6         # 河流
+    SWAMP = 7         # 沼泽
 
 # Load terrain images
 def load_terrain_images():
     images = {}
     for terrain in Terrain:
         try:
-            image_path = f'Asset/terrain/{terrain.name.lower()}.png'
+            # 将枚举名转换为文件名格式
+            terrain_name = terrain.name.lower()
+            image_path = f'Asset/TerrainsTypes/icon_{terrain_name}.png'
             img = pygame.image.load(image_path)
-            # Scale image to block size
-            img = pygame.transform.scale(img, (BLOCK_SIZE - 1, BLOCK_SIZE - 1))
-            images[terrain] = img
-        except pygame.error:
-            print(f'Warning: Could not load image for {terrain.name}')
+            
+            # Scale image to fit block size while maintaining aspect ratio
+            img_width = img.get_width()
+            img_height = img.get_height()
+            scale = min((BLOCK_SIZE - 1) / img_width, (BLOCK_SIZE - 1) / img_height)
+            new_width = int(img_width * scale)
+            new_height = int(img_height * scale)
+            img = pygame.transform.scale(img, (new_width, new_height))
+            
+            # Create a surface with the block size
+            surface = pygame.Surface((BLOCK_SIZE - 1, BLOCK_SIZE - 1), pygame.SRCALPHA)
+            # Center the scaled image on the surface
+            x = (BLOCK_SIZE - 1 - new_width) // 2
+            y = (BLOCK_SIZE - 1 - new_height) // 2
+            surface.blit(img, (x, y))
+            
+            images[terrain] = surface
+        except pygame.error as e:
+            print(f'Warning: Could not load image for {terrain_name}: {e}')
             images[terrain] = None
     return images
-
-class Terrain(Enum):
-    Building = 0    # 建筑 黑色
-    Plain = 1       # 平原 浅绿色
-    Forest = 2      # 森林 深绿色
-    River = 3       # 河流 蓝色
-    Farmland = 4    # 农田 金黄色
-    Mountain = 5    # 山地 灰色
-    Barren = 6      # 贫瘠 浅褐色
-    Fertile = 7     # 肥沃, 同时视为平原、森林、河流  白色
-    Urban = 8       # 城市 深棕色
-
-
-# Colors
-BLACK = (0, 0, 0)  # Building
-WHITE = (255, 255, 255)
-CREAM = (255, 253, 245)  # 奶白色背景
-LIGHT_GREEN = (144, 238, 144)  # Plain
-DARK_GREEN = (34, 139, 34)  # Forest
-BLUE = (0, 0, 255)  # River
-GOLDEN = (218, 165, 32)  # Farmland
-GRAY = (128, 128, 128)  # Mountain
-BROWN = (139, 69, 19)  # Barren
-PURPLE = (128, 0, 128)  # Fertile
-SILVER = (192, 192, 192)  # Urban
-RED = (255, 0, 0)  # Invalid placement
 
 # Game Constants 
 BLOCK_SIZE = 30
@@ -67,17 +74,7 @@ SHAPES = [
     [[0, 1, 1], [1, 1, 0]]   # Z
 ]
 
-TERRAIN_COLORS = {
-    Terrain.Building: BLACK,
-    Terrain.Plain: LIGHT_GREEN,
-    Terrain.Forest: DARK_GREEN,
-    Terrain.River: BLUE,
-    Terrain.Farmland: GOLDEN,
-    Terrain.Mountain: GRAY,
-    Terrain.Barren: BROWN,
-    Terrain.Fertile: PURPLE,
-    Terrain.Urban: SILVER
-}
+# 移除 TERRAIN_COLORS 因为我们现在使用图标而不是颜色
 
 class Tetris:
     def __init__(self):
@@ -88,10 +85,15 @@ class Tetris:
         self.toolbar_pieces = self.generate_toolbar_pieces()
         self.selected_piece = None
         self.mouse_pos = (0, 0)
+        # Tooltip related attributes
+        self.hover_start_time = 0
+        self.hover_piece: Optional[Dict[str, Any]] = None
+        self.show_tooltip = False
+        self.tooltip_font = pygame.font.Font(None, 24)
         self.reset_game()
 
     def reset_game(self):
-        self.grid = [[{'terrain': None, 'color': None} for _ in range(GRID_WIDTH)] for _ in range(GRID_HEIGHT)]
+        self.grid = [[{'terrain': None} for _ in range(GRID_WIDTH)] for _ in range(GRID_HEIGHT)]
         self.current_piece = None
         self.preview_piece = None
         self.game_over = False
@@ -110,7 +112,6 @@ class Tetris:
             pieces.append({
                 'shape': SHAPES[shape_idx],
                 'terrain': terrain,
-                'color': TERRAIN_COLORS[terrain],
                 'is_valid': True
             })
         return pieces
@@ -143,7 +144,6 @@ class Tetris:
         return {
             'shape': new_shape,
             'terrain': terrain,
-            'color': TERRAIN_COLORS[terrain],
             'is_valid': True,
             'x': GRID_WIDTH // 2 - len(new_shape[0]) // 2,
             'y': 0
@@ -187,8 +187,7 @@ class Tetris:
                 if cell:
                     if self.preview_piece['y'] + i >= 0:
                         self.grid[self.preview_piece['y'] + i][self.preview_piece['x'] + j] = {
-                            'terrain': self.preview_piece['terrain'],
-                            'color': self.preview_piece['color']
+                            'terrain': self.preview_piece['terrain']
                         }
         
         self.update_score()
@@ -216,20 +215,20 @@ class Tetris:
                         return True
         return False
 
-    def create_transparent_surface(self, terrain, alpha=128):
-        if self.terrain_images[terrain] is not None:
-            # Create a copy of the image and set its alpha
+    def create_transparent_surface(self, terrain, alpha=255):
+        # Create a transparent surface for preview
+        if terrain in self.terrain_images and self.terrain_images[terrain] is not None:
             surface = self.terrain_images[terrain].copy()
             surface.set_alpha(alpha)
             return surface
         else:
-            # Fallback to colored rectangle if image is not available
-            surface = pygame.Surface((BLOCK_SIZE - 1, BLOCK_SIZE - 1))
-            surface.fill(TERRAIN_COLORS[terrain])
-            surface.set_alpha(alpha)
+            # Fallback to empty surface if image is not available
+            surface = pygame.Surface((BLOCK_SIZE - 1, BLOCK_SIZE - 1), pygame.SRCALPHA)
+            surface.fill((128, 128, 128, alpha))  # 使用灰色作为后备
             return surface
 
     def draw(self):
+        # Clear screen
         self.screen.fill(CREAM)  # 使用奶白色背景
         
         # Draw player score bar
@@ -312,62 +311,145 @@ class Tetris:
 
         pygame.display.flip()
 
+    def render_tooltip(self, terrain, pos):
+        # Create tooltip text with terrain description
+        descriptions = {
+            Terrain.BUILDING: "建筑",
+            Terrain.FIELD: "农田",
+            Terrain.FOREST: "森林",
+            Terrain.MOUNTAIN: "山地",
+            Terrain.NEIGHBORHOOD: "社区",
+            Terrain.PLAIN: "平原",
+            Terrain.RIVER: "河流",
+            Terrain.SWAMP: "沼泽"
+        }
+        description = descriptions.get(terrain, terrain.name)
+        text = f"地形: {description}"
+        text_surface = self.tooltip_font.render(text, True, (0, 0, 0))
+        text_rect = text_surface.get_rect()
+        
+        # Position tooltip to the right of the cursor
+        x, y = pos
+        x += 20  # Offset from cursor
+        
+        # Create background rectangle
+        padding = 5
+        bg_rect = pygame.Rect(x, y, text_rect.width + padding * 2, text_rect.height + padding * 2)
+        
+        # Keep tooltip on screen
+        if bg_rect.right > SCREEN_WIDTH:
+            x = SCREEN_WIDTH - text_rect.width - padding * 2
+        if bg_rect.bottom > SCREEN_HEIGHT:
+            y = SCREEN_HEIGHT - text_rect.height - padding * 2
+        
+        # Draw tooltip
+        pygame.draw.rect(self.screen, CREAM, (x, y, text_rect.width + padding * 2, text_rect.height + padding * 2))
+        pygame.draw.rect(self.screen, BLACK, (x, y, text_rect.width + padding * 2, text_rect.height + padding * 2), 1)
+        self.screen.blit(text_surface, (x + padding, y + padding))
+
+    def get_hovered_piece(self, mouse_pos):
+        x, y = mouse_pos
+        
+        # Check toolbar pieces
+        if self.is_mouse_in_toolbar(mouse_pos):
+            toolbar_y = PLAYER_BAR_HEIGHT + GRID_HEIGHT * BLOCK_SIZE
+            for i, piece in enumerate(self.toolbar_pieces):
+                piece_x = i * (BLOCK_SIZE * 4)
+                piece_y = toolbar_y
+                piece_width = len(piece['shape'][0]) * BLOCK_SIZE
+                piece_height = len(piece['shape']) * BLOCK_SIZE
+                
+                if piece_x <= x < piece_x + piece_width and piece_y <= y < piece_y + piece_height:
+                    return piece
+        
+        # Check grid pieces
+        if self.is_mouse_in_grid(mouse_pos):
+            grid_x, grid_y = self.get_grid_pos_from_mouse(mouse_pos)
+            if 0 <= grid_x < GRID_WIDTH and 0 <= grid_y < GRID_HEIGHT:
+                cell = self.grid[grid_y][grid_x]
+                if cell['terrain'] is not None:
+                    return cell
+        
+        return None
+
+    def handle_toolbar_click(self):
+        piece_spacing = SCREEN_WIDTH // (len(self.toolbar_pieces) + 1)
+        # Calculate the center positions of each piece
+        for idx, piece in enumerate(self.toolbar_pieces):
+            piece_center_x = piece_spacing * (idx + 1)
+            piece_width = len(piece['shape'][0]) * BLOCK_SIZE
+            piece_x = piece_center_x - piece_width // 2
+            # Check if click is within piece bounds
+            if piece_x <= self.mouse_pos[0] < piece_x + piece_width:
+                self.selected_piece = {
+                    **self.toolbar_pieces[idx],
+                    'toolbar_idx': idx  # Store the index for later
+                }
+                break
+
+    def handle_grid_click(self):
+        grid_x, grid_y = self.get_grid_pos_from_mouse(self.mouse_pos)
+        preview = {
+            'shape': self.selected_piece['shape'],
+            'terrain': self.selected_piece['terrain'],
+            'x': grid_x,
+            'y': grid_y
+        }
+        if self.check_valid_placement(preview) and not self.check_overlap(preview):
+            self.preview_piece = preview
+            self.lock_piece()
+            # Replace the used piece with a new random one
+            toolbar_idx = self.selected_piece['toolbar_idx']
+            self.toolbar_pieces[toolbar_idx] = self.new_piece()
+            self.selected_piece = None
+
     def run(self):
-        while True:
-            self.clock.tick(30)
-            self.mouse_pos = pygame.mouse.get_pos()
+        running = True
+        while running:
+            self.clock.tick(60)
+            current_time = time.time()
             
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    pygame.quit()
-                    return
-
-                # Handle mouse clicks
+                    running = False
+                elif event.type == pygame.MOUSEMOTION:
+                    new_pos = event.pos
+                    if new_pos != self.mouse_pos:
+                        self.mouse_pos = new_pos
+                        # Check for hovered piece
+                        current_hover_piece = self.get_hovered_piece(new_pos)
+                        
+                        if current_hover_piece != self.hover_piece:
+                            self.hover_piece = current_hover_piece
+                            self.hover_start_time = current_time
+                            self.show_tooltip = False
                 elif event.type == pygame.MOUSEBUTTONDOWN and not self.game_over:
                     if event.button == 1:  # Left click
                         if self.is_mouse_in_toolbar(self.mouse_pos):
                             # Try to select a piece from toolbar
-                            piece_spacing = SCREEN_WIDTH // (len(self.toolbar_pieces) + 1)
-                            # Calculate the center positions of each piece
-                            for idx, piece in enumerate(self.toolbar_pieces):
-                                piece_center_x = piece_spacing * (idx + 1)
-                                piece_width = len(piece['shape'][0]) * BLOCK_SIZE
-                                piece_x = piece_center_x - piece_width // 2
-                                # Check if click is within piece bounds
-                                if piece_x <= self.mouse_pos[0] < piece_x + piece_width:
-                                    self.selected_piece = {
-                                        **self.toolbar_pieces[idx],
-                                        'toolbar_idx': idx  # Store the index for later
-                                    }
-                                    break
-                        elif self.is_mouse_in_grid(self.mouse_pos) and self.selected_piece:
+                            self.handle_toolbar_click()
+                        elif self.selected_piece and self.is_mouse_in_grid(self.mouse_pos):
                             # Try to place the selected piece
-                            grid_x, grid_y = self.get_grid_pos_from_mouse(self.mouse_pos)
-                            preview = {
-                                'shape': self.selected_piece['shape'],
-                                'terrain': self.selected_piece['terrain'],
-                                'color': self.selected_piece['color'],
-                                'x': grid_x,
-                                'y': grid_y
-                            }
-                            if self.check_valid_placement(preview) and not self.check_overlap(preview):
-                                self.preview_piece = preview
-                                self.lock_piece()
-                                # Replace the used piece with a new random one
-                                toolbar_idx = self.selected_piece['toolbar_idx']
-                                self.toolbar_pieces[toolbar_idx] = self.new_piece()
-                                self.selected_piece = None
-                    
+                            self.handle_grid_click()
                     elif event.button == 3:  # Right click
-                        # Cancel selection
-                        self.selected_piece = None
-                
-                # Handle mouse wheel for rotation of selected piece
-                elif event.type == pygame.MOUSEWHEEL and not self.game_over and self.selected_piece:
-                    if event.y != 0:  # y > 0 is scroll up, y < 0 is scroll down
-                        self.rotate_piece(self.selected_piece)
+                        if self.selected_piece:
+                            self.rotate_piece(self.selected_piece)
 
+            # Update tooltip visibility
+            if self.hover_piece and not self.show_tooltip:
+                if current_time - self.hover_start_time >= 2.0:  # 2 seconds hover time
+                    self.show_tooltip = True
+
+            # Draw everything
             self.draw()
+            
+            # Draw tooltip if needed (only for BUILDING terrain)
+            if (self.show_tooltip and self.hover_piece and 
+                'terrain' in self.hover_piece and 
+                self.hover_piece['terrain'] == Terrain.BUILDING):
+                self.render_tooltip(self.hover_piece['terrain'], self.mouse_pos)
+
+            pygame.display.flip()
 
 if __name__ == '__main__':
     game = Tetris()
