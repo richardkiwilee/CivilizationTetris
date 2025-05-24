@@ -1,0 +1,912 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Buildings>
+    
+    <Building id="0" Count="10" Name="雇佣兵营地" shape="L" tags="Military" ArmyType="Heavy" ArmyCount="15">
+        <Cost>
+            <Resource Type="Food" Amount="150"/>
+        </Cost>
+    </Building>
+
+    <Building id="1" Count="10" Name="雇佣兵营地" shape="Z" tags="Military" ArmyType="Light" ArmyCount="15">
+        <Cost>
+            <Resource Type="Wood" Amount="150"/>
+        </Cost>
+    </Building>
+
+    <Building id="2" Count="10" Name="雇佣兵营地" shape="J" tags="Military" ArmyType="Range" ArmyCount="15">
+        <Cost>
+            <Resource Type="Gold" Amount="100"/>
+        </Cost>
+    </Building>
+    
+    <Building id="3" Count="10" Name="瞭望塔" shape="Cell" tags="Military" ArmyType="Range" ArmyCount="0/0/0">
+        <Cost>
+            <Resource Type="Food" Amount="150/250/400"/>
+            <Resource Type="Wood" Amount="150/250/400"/>
+        </Cost>
+        <Activate>
+            <!--范围2/2/3内的平原提供驻兵1/2/3，农田提供驻兵3/3/5-->
+            <Effect Type="Range" Range="2/2/3">
+                <Trigger Type="Terrain" Terrain="Plain" BounsType="Army" BounsCount="1/2/3"/>
+                <Trigger Type="Terrain" Terrain="Farmland" BounsType="Army" BounsCount="3/3/5"/>
+            </Effect>
+        </Activate>
+    </Building>
+    
+    <Building id="4" Count="10" Name="镇子" shape="Line" tags="Production">
+        <Cost>
+            <Resource Type="Stone" Amount="50/100/150"/>
+            <Resource Type="Wood" Amount="0/50/100"/>
+            <Resource Type="Gold" Amount="50/100/150"/>
+        </Cost>
+        <Passive>
+            <!--相邻的生产建筑激活时提供15/20/25金币-->
+            <Trigger Type="Adjacent" Terrain="Production" ActionType="Activate" BounsType="Gold" BounsCount="15/20/25"/>
+        </Passive>
+    </Building>
+    
+    <Building id="5" Count="10" Name="镇长居所" shape="Cell" tags="Production">
+        <Cost>
+            <Resource Type="Stone" Amount="50/100/150"/>
+            <Resource Type="Wood" Amount="0/50/100"/>
+            <Resource Type="Gold" Amount="50/100/150"/>
+        </Cost>
+        <Activate>
+            <!--每与一个生产建筑或农田相连, 征收6/9/12金币-->
+            <Effect Type="Connected" Terrain="Production" BounsType="Gold" BounsCount="6/9/12"/>
+            <Effect Type="Connected" Terrain="Farmland" BounsType="Gold" BounsCount="6/9/12"/>
+        </Activate>
+    </Building>
+
+    <Building id="6" Count="10" Name="防匪农场" shape="Two" tags="Military" ArmyType="Light" ArmyCount="5/10/15">
+        <Cost>
+            <Resource Type="Wood" Amount="100/200/350"/>
+        </Cost>
+        <Activate>
+            <!--范围1/2/3内的平原变成农田 提供驻兵5/10/15-->
+            <Effect Type="Range" Range="1/2/3">
+                <Trigger Type="Transaction" From="Plain" To="Farmland"/>
+            </Effect>
+        </Activate>
+    </Building>
+
+    <Building id="7" Count="10" Name="闹市" shape="Two" tags="Production">
+        <Cost>
+            <Resource Type="Wood" Amount="0/50/200"/>
+            <Resource Type="Food" Amount="0/50/200"/>
+            <Resource Type="Stone" Amount="0/0/50"/>
+        </Cost>
+        <Activate>
+            <!--范围1/2/3内的平原和森林变成城市单元格-->
+            <Effect Type="Range" Range="1/2/3">
+                <Trigger Type="Transaction" From="Plain" To="Urban"/>
+                <Trigger Type="Transaction" From="Forest" To="Urban"/>
+            </Effect>
+        </Activate>
+    </Building>
+
+    <Building id="8" Count="10" Name="钟楼" shape="Rectangle8" tags="Military" ArmyType="Light" ArmyCount="5/10/15">
+        <Cost>
+            <Resource Type="Citizen" Amount="0/50/50/100/150/150/200/250/250/300"/>
+            <Resource Type="Stone" Amount="0/0/0/0/0/0/50/50/100/150"/>
+        </Cost>
+        <Activate>
+            <Effect Type="Connected" Terrain="Urban" BounsType="Citizen" BounsCount="1/1/1/2/2/2/3/3/3/4"/>
+            <Effect Type="None" BounsType="Food" BounsCount="2/2/2/3/3/3/4/4/4/5"/>
+            <Effect Type="None" BounsType="Wood" BounsCount="2/2/2/3/3/3/4/4/4/5"/>
+            <Effect Type="None" BounsType="Stone" BounsCount="2/2/2/3/3/3/4/4/4/5"/>
+            <Effect Type="None" BounsType="Gold" BounsCount="2/2/2/3/3/3/4/4/4/5"/>
+            <Effect Type="None" BounsType="Army" BounsCount="5/10/15/20/25/30/35/40/45/50"/>
+        </Activate>
+    </Building>
+
+    <Building id="9" Count="10" Name="集市" shape="Corner" tags="Production">
+        <Cost>
+            <Resource Type="Wood" Amount="150/250/400"/>
+        </Cost>
+        <Activate>
+            <!--每个相连的街坊单元格提供5/7/10粮食-->
+            <Effect Type="Connected" Terrain="Urban" BounsType="Food" BounsCount="5/7/10"/>
+        </Activate>
+    </Building> 
+
+    <Building id="10" Count="10" Name="仓库" shape="Line" tags="Production">
+        <Cost>
+            <Resource Type="Food" Amount="150/250/400"/>
+        </Cost>
+        <Activate>
+            <!--每个相连的街坊单元格提供5/7/10木头-->
+            <Effect Type="Connected" Terrain="Urban" BounsType="Wood" BounsCount="5/7/10"/>
+        </Activate>
+    </Building> 
+    
+    <Building id="11" Count="10" Name="骑士堡" shape="O" tags="Military" ArmyType="Range" ArmyCount="0/0/0">
+        <Cost>
+            <Resource Type="Food" Amount="100/200/300"/>
+            <Resource Type="Wood" Amount="100/200/0"/>
+            <Resource Type="Stone" Amount="0/0/150"/>
+            <Resource Type="Gold" Amount="50/100/250"/>
+        </Cost>
+        <Activate>
+            <!--提供信仰1/2/3 最小相连区域的每个单元格提供1/2/3箭-->
+            <Effect Type="None" BounsType="Faith" BounsCount="1/2/3"/>
+            <Effect Type="MinConnected" BounsType="Army" BounsCount="1/2/3"/>
+        </Activate>
+    </Building> 
+
+    <Building id="12" Count="10" Name="随军牧师驻地" shape="O" tags="Production">
+        <Cost>
+            <Resource Type="Food" Amount="100/0/0"/>
+            <Resource Type="Wood" Amount="100/100/100"/>
+            <Resource Type="Stone" Amount="0/0/50"/>
+            <Resource Type="Gold" Amount="0/50/150"/>
+        </Cost>
+        <Passive>
+            <!--如果毗邻宗教建筑 总计10/20/30的粮食、木头、石头-->
+            <Trigger Type="Adjacent" Terrain="Faith" ActionType="Exists" BounsType="Food" BounsCount="10/20/30"/>        
+            <Trigger Type="Adjacent" Terrain="Faith" ActionType="Exists" BounsType="Wood" BounsCount="10/20/30"/>        
+            <Trigger Type="Adjacent" Terrain="Faith" ActionType="Exists" BounsType="Stone" BounsCount="10/20/30"/>        
+        </Passive>
+    </Building> 
+
+    <Building id="13" Count="10" Name="墓地" shape="Corner" tags="Production">
+        <Cost>
+            <Resource Type="Wood" Amount="0/50/150"/>
+            <Resource Type="Gold" Amount="50/100/100"/>
+        </Cost>
+        <Activate Cost="True">
+            <Cost Type="Faith" Amount="1/3/5"/>
+            <!--消耗1/3/5信仰信仰 获得8/16/24的粮食、木头、石头-->
+            <Effect Type="MinConnected" BounsType="Food" BounsCount="8/16/24"/>
+            <Effect Type="MinConnected" BounsType="Wood" BounsCount="8/16/24"/>
+            <Effect Type="MinConnected" BounsType="Stone" BounsCount="8/16/24"/>
+        </Activate>
+    </Building> 
+
+    <Building id="14" Count="10" Name="十字军哨所" shape="Cell" tags="Military" ArmyType="Light" ArmyCount="0">
+        <Cost>
+            <Resource Type="Wood" Amount="0/50/150"/>
+            <Resource Type="Gold" Amount="50/100/100"/>
+        </Cost>
+        <Activate Cost="True">
+            <Cost Type="Faith" Amount="1/3/5"/>
+            <!--每与1种环境毗邻 获得15/25/35的粮食、木头、石头 驻兵5/10/15-->
+            <Effect Type="MinConnected" BounsType="Food" BounsCount="8/16/24"/>
+            <Effect Type="MinConnected" BounsType="Wood" BounsCount="8/16/24"/>
+            <Effect Type="MinConnected" BounsType="Stone" BounsCount="8/16/24"/>
+        </Activate>
+    </Building> 
+
+
+    <Building id="15" Count="10" Name="狩猎木屋" shape="Two" tags="Production,Military" ArmyType="Heavy" ArmyCount="0/0/0">
+        <Cost>
+            <Resource Type="Wood" Amount="300/350/350"/>
+            <Resource Type="Food" Amount="0/150/150"/>
+        </Cost>
+        <Activate>
+            <Effect Type="Connected" Terrain="Forest" BounsType="Food" BounsCount="3/6/9"/>
+            <Effect Type="Connected" Terrain="Forest" BounsType="Army" BounsCount="2/3/4"/>
+        </Activate>
+    </Building>
+    
+    <Building id="16" Count="10" Name="农场" shape="Cell" tags="Production">
+        <Cost>
+            <Resource Type="Wood" Amount="100/100/100"/>
+            <Resource Type="Food" Amount="0/100/100"/>
+        </Cost>
+        <Activate>
+            <!--范围1/2/3的平原变成农田-->
+            <Effect Type="Range" Range="1/2/3">
+                <Trigger Type="Transaction" From="Plain" To="Farmland"/>
+            </Effect>
+        </Activate>
+    </Building>
+
+    <Building id="17" Count="10" Name="伐木场" shape="Cell" tags="Production">
+        <Cost>
+            <Resource Type="Food" Amount="150/200/200"/>
+        </Cost>
+        <Activate>
+            <!--范围2/2/3的森林变成平原并获得8/12/12木头-->
+            <Effect Type="Range" Range="2/2/3">
+                <Trigger Type="Transaction" From="Forest" To="Plain"/>
+            </Effect>
+            <Effect Type="Range" Range="2/2/3" BounsType="Wood" BounsCount="8/12/12"/>
+        </Activate>
+    </Building>
+
+    <Building id="18" Count="10" Name="伐木营地" shape="Two" tags="Production">
+        <Cost>
+            <Resource Type="Food" Amount="150/200/200"/>
+        </Cost>
+        <Activate>
+            <!--范围2/2/3的森林变成平原并获得8/12/12木头-->
+            <Effect Type="Range" Range="2/2/3" BounsType="Wood" BounsCount="8/12/12"/>
+            <Effect Type="Range" Range="2/2/3">
+                <Trigger Type="Transaction" From="Forest" To="Plain"/>
+            </Effect>            
+        </Activate>
+    </Building>
+
+    <Building id="19" Count="10" Name="采石场" shape="Corner" tags="Production">
+        <Cost>
+            <Resource Type="Food" Amount="100/100/100"/>
+            <Resource Type="Gold" Amount="50/100/100"/>
+        </Cost>
+        <Activate>
+            <!--每与一个山地单元格相连 获得20/30/40石头-->
+            <Effect Type="Connected" Terrain="Mountain" BounsType="Stone" BounsCount="20/30/40"/>
+        </Activate>
+    </Building>
+
+    <Building id="20" Count="10" Name="游骑兵基地" shape="Corner" tags="Military">
+        <Cost>
+            <Resource Type="Wood" Amount="400/700/700"/>
+        </Cost>
+        <Activate>
+            <!--每与一个森林单元格相连 得3/5/7箭-->
+            <Effect Type="Connected" Terrain="Forest" BounsType="Army" BounsCount="3/5/7" ArmyType="Range"/>
+        </Activate>
+    </Building>
+
+    <Building id="21" Count="10" Name="木制堡垒" shape="Two" tags="Military">
+        <Cost>
+            <Resource Type="Wood" Amount="250/250/250"/>
+            <Resource Type="Food" Amount="150/250/250"/>
+            <Resource Type="Gold" Amount="0/0/150"/>
+        </Cost>
+        <Activate>
+            <!--驻兵10/15/20 将毗邻的森林单元格变成平原 每个成功转化获得3/4/5剑-->
+            <Effect Type="Garrison" BounsCount="10/15/20" ArmyType="Light"/>
+            <Effect Type="Connected" Terrain="Forest">
+                <Trigger Type="Transaction" From="Forest" To="Plain"/>
+                <BounsType="Army" BounsCount="3/4/5" ArmyType="Light"/>
+            </Effect>
+        </Activate>
+    </Building>
+
+    <Building id="22" Count="10" Name="哨所" shape="Two" tags="Military">
+        <Cost>
+            <Resource Type="Wood" Amount="300/350/350"/>
+            <Resource Type="Stone" Amount="100/200/200"/>
+        </Cost>
+        <Activate>
+            <!--每与1个山地puzzle相邻 得10/15/20剑-->
+            <Effect Type="Connected" Terrain="Mountain" BounsType="Army" BounsCount="10/15/20" ArmyType="Light"/>
+        </Activate>
+    </Building>
+
+    <Building id="23" Count="10" Name="砖石堡垒" shape="O" tags="Military">
+        <Cost>
+            <Resource Type="Wood" Amount="150/250/250"/>
+            <Resource Type="Stone" Amount="150/250/250"/>
+        </Cost>
+        <Activate>
+            <!--同行同列的每个山地puzzle 驻兵7/10/12箭-->
+            <Effect Type="Row" Terrain="Mountain" BounsType="Army" BounsCount="7/10/12" ArmyType="Range"/>
+            <Effect Type="Column" Terrain="Mountain" BounsType="Army" BounsCount="7/10/12" ArmyType="Range"/>
+        </Activate>
+    </Building>
+
+    <Building id="24" Count="10" Name="碎石厂" shape="Cell" tags="Production">
+        <Cost>
+            <Resource Type="Wood" Amount="100/100/100"/>
+            <Resource Type="Gold" Amount="50/100/100"/>
+        </Cost>
+        <Activate>
+            <!--行同列的每个建筑 产出20/30/40石头-->
+            <Effect Type="Row" BounsType="Stone" BounsCount="20/30/40"/>
+            <Effect Type="Column" BounsType="Stone" BounsCount="20/30/40"/>
+        </Activate>
+    </Building>
+
+    <Building id="25" Count="10" Name="路边旅馆" shape="Two" tags="Production">
+        <Cost>
+            <Resource Type="Food" Amount="150/150/150"/>
+            <Resource Type="Wood" Amount="0/100/100"/>
+        </Cost>
+        <Activate>
+            <!--每个毗邻建筑获得3/5/7金币-->
+            <Effect Type="Connected" BounsType="Gold" BounsCount="3/5/7"/>
+        </Activate>
+    </Building>
+
+    <Building id="26" Count="10" Name="民兵基地" shape="Two" tags="Military">
+        <Cost>
+            <Resource Type="Wood" Amount="150/250/250"/>
+            <Resource Type="Food" Amount="150/250/250"/>
+            <Resource Type="Gold" Amount="200/300/300"/>
+        </Cost>
+        <Activate>
+            <!--每个毗邻建筑获得3/5/7剑-->
+            <Effect Type="Connected" BounsType="Army" BounsCount="3/5/7" ArmyType="Light"/>
+        </Activate>
+    </Building>
+
+    <Building id="27" Count="10" Name="牧羊人小屋" shape="Cell" tags="Production">
+        <Cost>
+            <Resource Type="Wood" Amount="50/100/100"/>
+            <Resource Type="Stone" Amount="50/50/50"/>
+        </Cost>
+        <Activate>
+            <!--每个毗邻建筑获得3/5/7粮食-->
+            <Effect Type="Connected" BounsType="Food" BounsCount="3/5/7"/>
+        </Activate>
+    </Building>
+
+    <Building id="28" Count="10" Name="制高点" shape="Cell" tags="Military">
+        <Cost>
+            <Resource Type="Wood" Amount="150/200/200"/>
+            <Resource Type="Food" Amount="200/200/200"/>
+            <Resource Type="Gold" Amount="0/0/200"/>
+        </Cost>
+        <Activate>
+            <!--每个毗邻山地驻兵7/10/12箭-->
+            <Effect Type="Connected" Terrain="Mountain" BounsType="Army" BounsCount="7/10/12" ArmyType="Range"/>
+        </Activate>
+    </Building>
+
+    <Building id="29" Count="10" Name="石矿场" shape="Two" tags="Production">
+        <Cost>
+            <Resource Type="Gold" Amount="150/200/200"/>
+        </Cost>
+        <Activate>
+            <!--每个毗邻山地获得20/30/40石头-->
+            <Effect Type="Connected" Terrain="Mountain" BounsType="Stone" BounsCount="20/30/40"/>
+        </Activate>
+    </Building>
+
+    <Building id="30" Count="10" Name="淡金据点" shape="Two" tags="Production">
+        <Cost>
+            <Resource Type="Food" Amount="50/100/100"/>
+            <Resource Type="Stone" Amount="50/50/50"/>
+        </Cost>
+        <Activate>
+            <!--每个毗邻山地获得3/5/7金币-->
+            <Effect Type="Connected" Terrain="Mountain" BounsType="Gold" BounsCount="3/5/7"/>
+        </Activate>
+    </Building>
+
+    <Building id="31" Count="10" Name="集结点" shape="Corner" tags="Military">
+        <Cost>
+            <Resource Type="Wood" Amount="250/400/400"/>
+            <Resource Type="Food" Amount="250/400/400"/>
+        </Cost>
+        <Activate>
+            <!--每个毗邻建筑驻兵7/10/12剑-->
+            <Effect Type="Connected" BounsType="Army" BounsCount="7/10/12" ArmyType="Light"/>
+        </Activate>
+    </Building>
+
+    <Building id="32" Count="10" Name="果园" shape="Z" tags="Production">
+        <Cost>
+            <Resource Type="Gold" Amount="150/250/250"/>
+        </Cost>
+        <Activate>
+            <!--每个毗邻农田获得3/5/7粮食-->
+            <Effect Type="Connected" Terrain="Farmland" BounsType="Food" BounsCount="3/5/7"/>
+        </Activate>
+    </Building>
+
+    <Building id="33" Count="10" Name="木匠铺" shape="Line" tags="Production">
+        <Cost>
+            <Resource Type="Food" Amount="150/150/150"/>
+            <Resource Type="Stone" Amount="0/50/50"/>
+        </Cost>
+        <Activate>
+            <!--每个毗邻森林获得3/5/7木头-->
+            <Effect Type="Connected" Terrain="Forest" BounsType="Wood" BounsCount="3/5/7"/>
+        </Activate>
+    </Building>
+
+    <Building id="34" Count="10" Name="秘密洞穴" shape="Corner" tags="Military">
+        <Cost>
+            <Resource Type="Wood" Amount="200/400/400"/>
+            <Resource Type="Stone" Amount="150/200/200"/>
+        </Cost>
+        <Activate>
+            <!--每个毗邻山地驻兵7/10/12剑-->
+            <Effect Type="Connected" Terrain="Mountain" BounsType="Army" BounsCount="7/10/12" ArmyType="Light"/>
+        </Activate>
+    </Building>
+
+    <Building id="35" Count="10" Name="耕地" shape="Corner" tags="Production">
+        <Cost>
+            <Resource Type="Wood" Amount="150/200/200"/>
+        </Cost>
+        <Activate>
+            <!--每个毗邻农田获得3/5/7粮食-->
+            <Effect Type="Connected" Terrain="Farmland" BounsType="Food" BounsCount="3/5/7"/>
+        </Activate>
+    </Building>
+
+    <Building id="36" Count="10" Name="风车磨坊" shape="Cell" tags="Production">
+        <Cost>
+            <Resource Type="Wood" Amount="150/150/150"/>
+            <Resource Type="Gold" Amount="0/100/100"/>
+        </Cost>
+        <Activate>
+            <!--每个毗邻农田获得3/5/7粮食-->
+            <Effect Type="Connected" Terrain="Farmland" BounsType="Food" BounsCount="3/5/7"/>
+        </Activate>
+    </Building>
+
+    <Building id="37" Count="10" Name="训练营地" shape="Corner" tags="Military">
+        <Cost>
+            <Resource Type="Food" Amount="450/500/500"/>
+            <Resource Type="Wood" Amount="0/200/200"/>
+        </Cost>
+        <Activate>
+            <!--每个毗邻建筑驻兵7/10/12剑-->
+            <Effect Type="Connected" BounsType="Army" BounsCount="7/10/12" ArmyType="Light"/>
+        </Activate>
+    </Building>
+
+    <Building id="38" Count="10" Name="马厩" shape="Two" tags="Military">
+        <Cost>
+            <Resource Type="Food" Amount="250/300/300"/>
+            <Resource Type="Wood" Amount="250/300/300"/>
+            <Resource Type="Stone" Amount="0/0/100"/>
+        </Cost>
+        <Activate>
+            <!--每个毗邻建筑驻兵7/10/12箭-->
+            <Effect Type="Connected" BounsType="Army" BounsCount="7/10/12" ArmyType="Range"/>
+        </Activate>
+    </Building>
+
+    <Building id="39" Count="10" Name="哨塔" shape="Cell" tags="Military">
+        <Cost>
+            <Resource Type="Food" Amount="250/250/250"/>
+            <Resource Type="Gold" Amount="250/400/400"/>
+        </Cost>
+        <Activate>
+            <!--同行或同列的每一个敌方军事建筑 得10/15/20斧-->
+            <Effect Type="Row" BounsType="Army" BounsCount="10/15/20" ArmyType="Heavy" Enemy="true"/>
+            <Effect Type="Column" BounsType="Army" BounsCount="10/15/20" ArmyType="Heavy" Enemy="true"/>
+        </Activate>
+    </Building>
+
+    <Building id="40" Count="10" Name="围城营地" shape="J" tags="Military">
+        <Cost>
+            <Resource Type="Food" Amount="250/300/300"/>
+            <Resource Type="Wood" Amount="250/300/300"/>
+            <Resource Type="Stone" Amount="0/0/100"/>
+        </Cost>
+        <Activate>
+            <!--范围2/2/2的所有敌方部队减员8/12/16 驻兵10/15/20斧-->
+            <Effect Type="Range" Range="2/2/2" BounsType="Army" BounsCount="-8/-12/-16" Enemy="true"/>
+            <Effect Type="Garrison" BounsCount="10/15/20" ArmyType="Heavy"/>
+        </Activate>
+    </Building>
+
+    <Building id="41" Count="10" Name="税务所" shape="Cell" tags="Production">
+        <Cost>
+            <Resource Type="Wood" Amount="150/250/250"/>
+            <Resource Type="Food" Amount="0/100/100"/>
+        </Cost>
+        <Activate>
+            <!--同行或同列的每一个敌方建筑 获得15/25/35金币-->
+            <Effect Type="Row" BounsType="Gold" BounsCount="15/25/35" Enemy="true"/>
+            <Effect Type="Column" BounsType="Gold" BounsCount="15/25/35" Enemy="true"/>
+        </Activate>
+    </Building>
+
+    <Building id="42" Count="10" Name="煤窩" shape="Corner" tags="Production">
+        <Cost>
+            <Resource Type="Wood" Amount="100/150/150"/>
+            <Resource Type="Food" Amount="50/100/100"/>
+        </Cost>
+        <Activate>
+            <!--每个毗邻的森林单元格提供10/15/20金币 若被森林包围 额外获得50/100/150金币-->
+            <Effect Type="Connected" Terrain="Forest" BounsType="Gold" BounsCount="10/15/20"/>
+            <Effect Type="Surrounded" Terrain="Forest" BounsType="Gold" BounsCount="50/100/150"/>
+        </Activate>
+    </Building>
+
+    <Building id="43" Count="10" Name="营房" shape="Corner" tags="Military">
+        <Cost>
+            <Resource Type="Gold" Amount="500/800/800"/>
+        </Cost>
+        <Activate>
+            <!--每获得20金币 得2/3/4剑-->
+            <Effect Type="GoldToArmy" Gold="20" BounsType="Army" BounsCount="2/3/4" ArmyType="Light"/>
+        </Activate>
+    </Building>
+
+    <Building id="44" Count="10" Name="策骑营地" shape="Two" tags="Military">
+        <Cost>
+            <Resource Type="Food" Amount="250/300/300"/>
+            <Resource Type="Wood" Amount="250/300/300"/>
+            <Resource Type="Stone" Amount="0/0/100"/>
+        </Cost>
+        <Activate>
+            <!--每个毗邻建筑驻兵7/10/12箭-->
+            <Effect Type="Connected" BounsType="Army" BounsCount="7/10/12" ArmyType="Range"/>
+        </Activate>
+    </Building>
+
+    <Building id="45" Count="10" Name="锈木厂" shape="Two" tags="Production">
+        <Cost>
+            <Resource Type="Food" Amount="150/150/150"/>
+            <Resource Type="Gold" Amount="0/100/100"/>
+        </Cost>
+        <Activate>
+            <!--每个毗邻森林获得3/5/7木头-->
+            <Effect Type="Connected" Terrain="Forest" BounsType="Wood" BounsCount="3/5/7"/>
+        </Activate>
+    </Building>
+
+    <Building id="46" Count="10" Name="水车磨坊" shape="Two" tags="Production">
+        <Cost>
+            <Resource Type="Wood" Amount="150/250/250"/>
+        </Cost>
+        <Activate>
+            <!--每个毗邻农田获得3/5/7粮食-->
+            <Effect Type="Connected" Terrain="Farmland" BounsType="Food" BounsCount="3/5/7"/>
+        </Activate>
+    </Building>
+
+    <Building id="47" Count="10" Name="护河营" shape="Two" tags="Military">
+        <Cost>
+            <Resource Type="Wood" Amount="200/250/250"/>
+            <Resource Type="Food" Amount="100/250/250"/>
+            <Resource Type="Gold" Amount="200/300/300"/>
+        </Cost>
+        <Activate>
+            <!--每个毗邻建筑驻兵7/10/12箭-->
+            <Effect Type="Connected" BounsType="Army" BounsCount="7/10/12" ArmyType="Range"/>
+        </Activate>
+    </Building>
+
+    <Building id="48" Count="10" Name="船坛" shape="L" tags="Military">
+        <Cost>
+            <Resource Type="Wood" Amount="150/200/200"/>
+            <Resource Type="Food" Amount="150/250/250"/>
+            <Resource Type="Gold" Amount="200/400/400"/>
+        </Cost>
+        <Activate>
+            <!--每个毗邻建筑驻兵7/10/12箭-->
+            <Effect Type="Connected" BounsType="Army" BounsCount="7/10/12" ArmyType="Range"/>
+        </Activate>
+    </Building>
+
+    <Building id="49" Count="10" Name="渔场" shape="Cell" tags="Production">
+        <Cost>
+            <Resource Type="Wood" Amount="100/150/150"/>
+            <Resource Type="Gold" Amount="50/100/100"/>
+        </Cost>
+        <Activate>
+            <!--每个毗邻农田获得3/5/7粮食-->
+            <Effect Type="Connected" Terrain="Farmland" BounsType="Food" BounsCount="3/5/7"/>
+        </Activate>
+    </Building>
+
+    <Building id="50" Count="10" Name="水畔菜市场" shape="T" tags="Production">
+        <Cost>
+            <Resource Type="Wood" Amount="50/100/100"/>
+            <Resource Type="Food" Amount="100/150/150"/>
+        </Cost>
+        <Activate>
+            <!--每个毗邻农田获得3/5/7粮食-->
+            <Effect Type="Connected" Terrain="Farmland" BounsType="Food" BounsCount="3/5/7"/>
+        </Activate>
+    </Building>
+
+    <Building id="51" Count="10" Name="丰腐之地" shape="O" tags="Production">
+        <Cost>
+            <Resource Type="Wood" Amount="50/100/100"/>
+            <Resource Type="Food" Amount="50/100/100"/>
+            <Resource Type="Gold" Amount="50/100/100"/>
+        </Cost>
+        <Activate>
+            <!--每个毗邻农田获得3/5/7粮食-->
+            <Effect Type="Connected" Terrain="Farmland" BounsType="Food" BounsCount="3/5/7"/>
+        </Activate>
+    </Building>
+
+    <Building id="52" Count="10" Name="桥梁" shape="Line" tags="Production">
+        <Cost>
+            <Resource Type="Wood" Amount="50/100/100"/>
+            <Resource Type="Food" Amount="50/100/100"/>
+        </Cost>
+        <Activate>
+            <!--每个毗邻农田获得3/5/7粮食-->
+            <Effect Type="Connected" Terrain="Farmland" BounsType="Food" BounsCount="3/5/7"/>
+        </Activate>
+    </Building>
+
+    <Building id="53" Count="10" Name="水畔城堡" shape="O" tags="Military">
+        <Cost>
+            <Resource Type="Wood" Amount="250/0/0"/>
+            <Resource Type="Food" Amount="250/150/150"/>
+            <Resource Type="Gold" Amount="150/100/100"/>
+            <Resource Type="Stone" Amount="0/300/300"/>
+        </Cost>
+        <Activate>
+            <!--每个毗邻建筑驻兵7/10/12箭-->
+            <Effect Type="Connected" BounsType="Army" BounsCount="7/10/12" ArmyType="Range"/>
+        </Activate>
+    </Building>
+
+    <Building id="54" Count="10" Name="平原造林站" shape="Two" tags="Production">
+        <Cost>
+            <Resource Type="Food" Amount="100/150/150"/>
+            <Resource Type="Gold" Amount="50/100/100"/>
+            <Resource Type="Stone" Amount="0/50/50"/>
+        </Cost>
+        <Activate>
+            <!--每个毗邻森林获得3/5/7木头-->
+            <Effect Type="Connected" Terrain="Forest" BounsType="Wood" BounsCount="3/5/7"/>
+        </Activate>
+    </Building>
+
+    <Building id="55" Count="10" Name="要塞" shape="O" tags="Military">
+        <Cost>
+            <Resource Type="Wood" Amount="450/650/650"/>
+            <Resource Type="Food" Amount="0/200/200"/>
+        </Cost>
+        <Activate>
+            <!--每个毗邻建筑驻兵10/15/20剑-->
+            <Effect Type="Connected" BounsType="Army" BounsCount="10/15/20" ArmyType="Light"/>
+        </Activate>
+    </Building>
+
+    <Building id="56" Count="10" Name="小教堂" shape="Cell" tags="Religion">
+        <Cost>
+            <Resource Type="Wood" Amount="100/100/100"/>
+            <Resource Type="Gold" Amount="0/100/100"/>
+        </Cost>
+        <Activate>
+            <!--每个毗邻建筑获得3/5/7信仰-->
+            <Effect Type="Connected" BounsType="Faith" BounsCount="3/5/7"/>
+        </Activate>
+    </Building>
+
+    <Building id="57" Count="10" Name="教堂" shape="Two" tags="Religion">
+        <Cost>
+            <Resource Type="Wood" Amount="50/0/0"/>
+            <Resource Type="Food" Amount="50/0/0"/>
+            <Resource Type="Gold" Amount="100/200/200"/>
+            <Resource Type="Stone" Amount="0/50/50"/>
+        </Cost>
+        <Activate>
+            <!--每个毗邻建筑获得3/5/7信仰-->
+            <Effect Type="Connected" BounsType="Faith" BounsCount="3/5/7"/>
+        </Activate>
+    </Building>
+
+    <Building id="58" Count="10" Name="神学院" shape="Two" tags="Religion">
+        <Cost>
+            <Resource Type="Food" Amount="150/250/250"/>
+            <Resource Type="Gold" Amount="50/0/0"/>
+            <Resource Type="Stone" Amount="0/50/50"/>
+        </Cost>
+        <Activate>
+            <!--每个毗邻建筑获得3/5/7信仰-->
+            <Effect Type="Connected" BounsType="Faith" BounsCount="3/5/7"/>
+        </Activate>
+    </Building>
+
+    <Building id="59" Count="10" Name="教堂捐税所" shape="Two" tags="Religion">
+        <Cost>
+            <Resource Type="Gold" Amount="200/100/100"/>
+            <Resource Type="Stone" Amount="0/100/100"/>
+        </Cost>
+        <Activate>
+            <!--如果毗邻森林 获得信仰值3/5/7倍的粮食、木头和金币-->
+            <Effect Type="Connected" Terrain="Forest" BounsType="Food" BounsCount="3/5/7" FaithMultiplier="true"/>
+            <Effect Type="Connected" Terrain="Forest" BounsType="Wood" BounsCount="3/5/7" FaithMultiplier="true"/>
+            <Effect Type="Connected" Terrain="Forest" BounsType="Gold" BounsCount="3/5/7" FaithMultiplier="true"/>
+        </Activate>
+    </Building>
+
+    <Building id="60" Count="10" Name="僧院" shape="Line" tags="Religion">
+        <Cost>
+            <Resource Type="Gold" Amount="200/300/300"/>
+        </Cost>
+        <Activate>
+            <!--获得1信仰和信仰值10/15/20倍的粮食-->
+            <Effect Type="Faith" BounsCount="1"/>
+            <Effect Type="Food" BounsCount="10/15/20" FaithMultiplier="true"/>
+        </Activate>
+    </Building>
+
+    <Building id="61" Count="10" Name="修道院" shape="S" tags="Religion">
+        <Cost>
+            <Resource Type="Wood" Amount="100/150/150"/>
+            <Resource Type="Food" Amount="100/150/150"/>
+        </Cost>
+        <Activate>
+            <!--获得1信仰和信仰值10/15/20倍的木材-->
+            <Effect Type="Faith" BounsCount="1"/>
+            <Effect Type="Wood" BounsCount="10/15/20" FaithMultiplier="true"/>
+        </Activate>
+    </Building>
+
+    <Building id="62" Count="10" Name="骑士团团长辖地" shape="Corner" tags="Religion,Military">
+        <Cost>
+            <Resource Type="Wood" Amount="150/250/250"/>
+            <Resource Type="Food" Amount="150/0/0"/>
+            <Resource Type="Gold" Amount="200/200/200"/>
+            <Resource Type="Stone" Amount="0/200/200"/>
+        </Cost>
+        <Activate>
+            <!--获得1信仰 驻养信仰值3/4/5倍的剑-->
+            <Effect Type="Faith" BounsCount="1"/>
+            <Effect Type="Garrison" BounsType="Army" BounsCount="3/4/5" ArmyType="Light" FaithMultiplier="true"/>
+        </Activate>
+    </Building>
+
+    <Building id="63" Count="10" Name="异教巢穴" shape="T" tags="Military">
+        <Cost>
+            <Resource Type="Wood" Amount="150/200/200"/>
+            <Resource Type="Food" Amount="150/200/200"/>
+            <Resource Type="Gold" Amount="200/400/400"/>
+            <Resource Type="Faith" Amount="10/20/20"/>
+        </Cost>
+        <Activate>
+            <!--每个毗邻建筑驻兵7/10/12箭-->
+            <Effect Type="Connected" BounsType="Army" BounsCount="7/10/12" ArmyType="Range"/>
+        </Activate>
+    </Building>
+
+    <Building id="64" Count="10" Name="隐士洞穴" shape="Cell" tags="Religion">
+        <Cost>
+            <Resource Type="Stone" Amount="100/200/200"/>
+            <Resource Type="Food" Amount="50/150/150"/>
+        </Cost>
+        <Activate>
+            <!--每个毗邻建筑获得3/5/7信仰-->
+            <Effect Type="Connected" BounsType="Faith" BounsCount="3/5/7"/>
+        </Activate>
+    </Building>
+
+    <Building id="65" Count="10" Name="圣地" shape="Cell" tags="Religion,Unique">
+        <Cost>
+            <Resource Type="Wood" Amount="200/0/0"/>
+            <Resource Type="Food" Amount="100/0/0"/>
+            <Resource Type="Gold" Amount="300/450/450"/>
+            <Resource Type="Stone" Amount="0/250/250"/>
+        </Cost>
+        <Activate>
+            <!--每个毗邻建筑获得3/5/7信仰-->
+            <Effect Type="Connected" BounsType="Faith" BounsCount="3/5/7"/>
+        </Activate>
+    </Building>
+
+    <Building id="66" Count="10" Name="监狱" shape="Corner" tags="Military">
+        <Cost>
+            <Resource Type="Food" Amount="500/600/600"/>
+            <Resource Type="Stone" Amount="0/100/100"/>
+        </Cost>
+        <Activate>
+            <!--每个毗邻建筑驻兵7/10/12剑-->
+            <Effect Type="Connected" BounsType="Army" BounsCount="7/10/12" ArmyType="Light"/>
+        </Activate>
+    </Building>
+
+    <Building id="67" Count="10" Name="盗贼巢穴" shape="L" tags="Military">
+        <Cost>
+            <Resource Type="Food" Amount="150/300/300"/>
+            <Resource Type="Wood" Amount="150/300/300"/>
+            <Resource Type="Gold" Amount="200/300/300"/>
+        </Cost>
+        <Activate>
+            <!--每个毗邻建筑驻兵7/10/12剑-->
+            <Effect Type="Connected" BounsType="Army" BounsCount="7/10/12" ArmyType="Light"/>
+        </Activate>
+    </Building>
+
+    <Building id="68" Count="10" Name="补给线" shape="Two" tags="Military">
+        <Cost>
+            <Resource Type="Food" Amount="250/300/300"/>
+            <Resource Type="Wood" Amount="250/250/250"/>
+            <Resource Type="Stone" Amount="0/150/150"/>
+        </Cost>
+        <Activate>
+            <!--每个毗邻建筑驻兵7/10/12剑-->
+            <Effect Type="Connected" BounsType="Army" BounsCount="7/10/12" ArmyType="Light"/>
+        </Activate>
+    </Building>
+
+    <Building id="69" Count="10" Name="劫掠殖民地" shape="Z" tags="Military">
+        <Cost>
+            <Resource Type="Food" Amount="100/0/0"/>
+            <Resource Type="Wood" Amount="100/0/0"/>
+            <Resource Type="Gold" Amount="300/500/500"/>
+            <Resource Type="Stone" Amount="0/200/200"/>
+        </Cost>
+        <Activate>
+            <!--每个毗邻建筑驻兵7/10/12剑-->
+            <Effect Type="Connected" BounsType="Army" BounsCount="7/10/12" ArmyType="Light"/>
+        </Activate>
+    </Building>
+
+    <Building id="70" Count="10" Name="城堡" shape="O" tags="Military,Unique,Nobility">
+        <Cost>
+            <Resource Type="Food" Amount="200/100/100"/>
+            <Resource Type="Wood" Amount="200/0/0"/>
+            <Resource Type="Gold" Amount="300/500/500"/>
+            <Resource Type="Stone" Amount="0/200/200"/>
+        </Cost>
+        <Activate>
+            <!--每个毗邻建筑驻兵10/15/20剑-->
+            <Effect Type="Connected" BounsType="Army" BounsCount="10/15/20" ArmyType="Light"/>
+        </Activate>
+    </Building>
+
+    <Building id="71" Count="10" Name="棱堡" shape="O" tags="Military,Nobility">
+        <Cost>
+            <Resource Type="Food" Amount="200/300/300"/>
+            <Resource Type="Stone" Amount="50/200/200"/>
+            <Resource Type="Gold" Amount="200/300/300"/>
+        </Cost>
+        <Activate>
+            <!--每个毗邻建筑驻兵7/10/12剑-->
+            <Effect Type="Connected" BounsType="Army" BounsCount="7/10/12" ArmyType="Light"/>
+        </Activate>
+    </Building>
+
+    <Building id="72" Count="10" Name="皇家花园" shape="Z" tags="Production,Nobility">
+        <Cost>
+            <Resource Type="Wood" Amount="100/0/0"/>
+            <Resource Type="Food" Amount="50/50/50"/>
+            <Resource Type="Gold" Amount="50/50/50"/>
+            <Resource Type="Stone" Amount="0/100/100"/>
+        </Cost>
+        <Activate>
+            <!--每个毗邻建筑获得3/5/7粮食-->
+            <Effect Type="Connected" BounsType="Food" BounsCount="3/5/7"/>
+        </Activate>
+    </Building>
+
+    <Building id="73" Count="10" Name="庄园" shape="Corner" tags="Production,Nobility">
+        <Cost>
+            <Resource Type="Wood" Amount="150/0/0"/>
+            <Resource Type="Gold" Amount="100/100/100"/>
+            <Resource Type="Stone" Amount="0/100/100"/>
+        </Cost>
+        <Activate>
+            <!--每个毗邻建筑获得3/5/7粮食-->
+            <Effect Type="Connected" BounsType="Food" BounsCount="3/5/7"/>
+        </Activate>
+    </Building>
+
+    <Building id="74" Count="10" Name="铁匠铺" shape="Cell" tags="Special">
+        <Cost>
+            <Resource Type="Wood" Amount="500/500/500"/>
+            <Resource Type="Stone" Amount="100/200/200"/>
+            <Resource Type="Gold" Amount="0/200/200"/>
+        </Cost>
+        <Activate>
+            <!--每个毗邻建筑驻兵7/10/12剑-->
+            <Effect Type="Connected" BounsType="Army" BounsCount="7/10/12" ArmyType="Light"/>
+        </Activate>
+    </Building>
+
+    <Building id="75" Count="10" Name="大教堂" shape="O" tags="Unique,Nobility">
+        <Cost>
+            <Resource Type="Stone" Amount="150/300/300"/>
+            <Resource Type="Food" Amount="100/200/200"/>
+            <Resource Type="Gold" Amount="300/300/300"/>
+        </Cost>
+        <Activate>
+            <!--每个毗邻建筑获得3/5/7信仰-->
+            <Effect Type="Connected" BounsType="Faith" BounsCount="3/5/7"/>
+        </Activate>
+    </Building>
+
+    <Building id="76" Count="10" Name="纪念碑" shape="Cell" tags="Special,Unique,Nobility">
+        <Cost>
+            <Resource Type="Wood" Amount="200/0/0"/>
+            <Resource Type="Food" Amount="300/300/300"/>
+            <Resource Type="Gold" Amount="200/200/200"/>
+            <Resource Type="Stone" Amount="0/300/300"/>
+        </Cost>
+        <Activate>
+            <!--每个毗邻建筑获得3/5/7信仰-->
+            <Effect Type="Adjacent" BounsType="Faith" BounsCount="3/5/7"/>
+        </Activate>
+    </Building>
+
+</Buildings>
