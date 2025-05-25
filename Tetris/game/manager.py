@@ -1,19 +1,26 @@
 from typing import List, Set, Dict, Any, Optional
 import random
 import traceback
-from Tetris.game.desktop import Desktop
-from Tetris.game.deck import Deck
-from Tetris.game.terrain import *
-from Tetris.game.player import Player
+try:
+    from Tetris.game.desktop import Desktop
+    from Tetris.game.deck import Deck, DEFAULT_MAP_SETTING
+    from Tetris.game.terrain import *
+    from Tetris.game.player import Player
+except:
+    from desktop import Desktop
+    from deck import Deck, DEFAULT_MAP_SETTING
+    from terrain import *
+    from player import Player
 
 
 class Manager:
     def __init__(self):
         self.Desktop = None
         self.puzzle_deck = None
-        self.setting = dict()
+        self.setting = DEFAULT_MAP_SETTING
         self.setMapSize(7, 4)
         self.puzzle_objs = dict()
+        self.players = list()
 
     def setMapSize(self, block_size, block_count):
         self.setting['block_size'] = block_size
@@ -36,6 +43,7 @@ class Manager:
         size = self.setting['block_size'] * self.setting['block_count']
         self.Desktop = Desktop(size, size)
         self.puzzle_deck = Deck(self.setting)
+        self.puzzle_deck.init()
 
     def dumpPlayerInfo(self) -> Dict[str, Any]:
         info = dict()
@@ -282,7 +290,22 @@ class Manager:
             pass
         return True
 
+    def Serialize(self):
+        ret = dict()
+        ret['Desktop'] = self.Desktop.Serialize()
+        ret['puzzle_deck'] = self.puzzle_deck.Serialize()
+        ret['setting'] = self.setting
+        ret['puzzle_objs'] = self.puzzle_objs
+        ret['players'] = self.players
+        return ret
+
+    def Deserialize(self, data):
+        if self.Desktop is None:
+            return False
+        self.Desktop.Deserialize(data)
+        return True
 
 if __name__ == '__main__':
     manager = Manager()
     manager.StartGame()
+    print(manager.Serialize())

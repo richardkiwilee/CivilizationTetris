@@ -85,14 +85,24 @@ class Cell:
             ret['building_id'] = self.building_id
         return ret
 
+    def load(self, data):
+        self.owner = data['owner']
+        self.terrainType = data['terrainType']
+        self.puzzle_id = data['puzzle_id']
+        self.building_id = data['building_id']
+
+def load_cell(data):
+    cell = Cell()
+    cell.load(data)
+    return cell
 
 class Puzzle:
-    def __init__():
+    def __init__(self):
         self.puzzle_id = None   # 拼块id
         self.x = None   # 中心坐标x
         self.y = None   # 中心坐标y
         self.rotation = None   # 旋转角度
-        
+
         self.terrainType = None   # 地形类型
         self.shape = None   # 形状        
         self.building_id = None   # 建筑id 如果是None则表示这个拼块不是一个建筑
@@ -123,3 +133,20 @@ class Puzzle:
         if self.army_owner:  
             ret['army_owner'] = self.army_owner
         return ret
+
+    def load(self, data):
+        self.puzzle_id = data['puzzle_id']
+        self.x = data['x']
+        self.y = data['y']
+        self.terrainType = data['terrainType']
+        self.shape = data['shape']
+        self.rotation = data['rotation']
+        self.building_id = data['building_id']
+        self.building_level = data['building_level']
+        self.army = data['army']
+        self.army_owner = data['army_owner']
+
+def load_puzzle(data):
+    puzzle = Puzzle()
+    puzzle.load(data)
+    return puzzle

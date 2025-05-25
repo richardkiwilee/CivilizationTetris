@@ -1,7 +1,9 @@
-from turtle import settiltangle
-from .terrain import Puzzle, Terrain, Shape
 import random
 from configparser import ConfigParser
+try:
+    from .terrain import Puzzle, Terrain, Shape
+except:
+    from terrain import Puzzle, Terrain, Shape
 
 # 基于28*28的设置
 DEFAULT_MAP_SETTING = {
@@ -20,7 +22,6 @@ DEFAULT_MAP_SETTING = {
 class Deck:
     def __init__(self, setting=DEFAULT_MAP_SETTING):
         self.setting = setting
-        self.mapsize = setting['block_size'] * setting['block_size'] * setting['block_count'] *setting['block_count']
         self.draw_pile = list()
         self.discard_pile = list()
         self.init()
@@ -60,8 +61,20 @@ class Deck:
                 puzzle.army_owner = None
                 self.draw_pile.append(puzzle)
                 index += 1
-        self.draw_pile.shuffle()
+        random.shuffle(self.draw_pile)
 
 
     def Draw(self) -> Puzzle:
         return self.draw_pile.pop()
+
+    def Serialize(self):
+        ret = dict()
+        ret['setting'] = self.setting
+        ret['draw_pile'] = [p.dump() for p in self.draw_pile]
+        ret['discard_pile'] = [p.dump() for p in self.discard_pile]
+        return ret
+
+    def Deserialize(self, data):
+        self.setting = data['setting']
+        self.draw_pile = [load_puzzle(p) for p in data['draw_pile']]
+        self.discard_pile = [load_puzzle(p) for p in data['discard_pile']]
