@@ -180,17 +180,9 @@ class Tetris:
         return True
 
     def rotate_piece(self, piece):
-        # Create new rotated shape
+        # Create new rotated shape and always allow rotation
         new_shape = list(zip(*piece['shape'][::-1]))
-        
-        # If piece is selected and mouse is in grid, check if rotation is valid at current mouse position
-        if self.selected_piece and self.is_mouse_in_grid(self.mouse_pos):
-            grid_x, grid_y = self.get_grid_pos_from_mouse(self.mouse_pos)
-            if self.valid_move({'shape': new_shape, 'x': grid_x, 'y': grid_y}, grid_x, grid_y):
-                piece['shape'] = new_shape
-        else:
-            # For pieces in toolbar, always allow rotation
-            piece['shape'] = new_shape
+        piece['shape'] = new_shape
 
     def update_score(self):
         # Just increment score when piece is placed
