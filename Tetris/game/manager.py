@@ -4,23 +4,29 @@ import traceback
 try:
     from Tetris.game.desktop import Desktop
     from Tetris.game.deck import Deck, DEFAULT_MAP_SETTING
-    from Tetris.game.terrain import *
+    from Tetris.game.terrain import Puzzle, Terrain, Shape, ShapeHelper
     from Tetris.game.player import Player
 except:
     from desktop import Desktop
     from deck import Deck, DEFAULT_MAP_SETTING
-    from terrain import *
+    from terrain import Puzzle, Terrain, Shape, ShapeHelper
     from player import Player
 
 
 class Manager:
     def __init__(self):
+        self.shape_helper = ShapeHelper()
         self.Desktop = None
         self.puzzle_deck = None
         self.setting = DEFAULT_MAP_SETTING
         self.setMapSize(7, 4)
         self.puzzle_objs = dict()
-        self.players = list()
+        self.players = dict()
+
+    def AddPlayer(self, name: str):
+        player = Player()
+        player.name = name
+        self.players[name] = player
 
     def setMapSize(self, block_size, block_count):
         self.setting['block_size'] = block_size
@@ -38,16 +44,11 @@ class Manager:
         self.setting['TerrainRatio'][Terrain.Mountain.value] = _2 * 5
         self.setting['TerrainRatio'][Terrain.Barren.value] = _2 * 2
 
-
     def StartGame(self):
         size = self.setting['block_size'] * self.setting['block_count']
         self.Desktop = Desktop(size, size)
         self.puzzle_deck = Deck(self.setting)
         self.puzzle_deck.init()
-
-    def dumpPlayerInfo(self) -> Dict[str, Any]:
-        info = dict()
-        return info
 
     def GetPuzzle(self, x, y) -> Optional[Puzzle]:
         if self.Desktop is None:
@@ -78,8 +79,9 @@ class Manager:
     def Placeable(self, player: Player, x, y, puzzle: Puzzle, rotate=0) -> bool:
         if self.Desktop is None:
             return False
-        if puzzle.type == PuzzleType.Building.value:
-            for _cell in puzzle.cells:
+        shape = puzzle.shape
+        if puzzle.terrainType == Terrain.Building.value:
+            for _cell in self.shape_helper.GetShape(shape):
                 # 计算旋转后的相对坐标
                 rx, ry = rotate_point(_cell[0], _cell[1], rotate)
                 # 计算实际坐标
@@ -94,9 +96,8 @@ class Manager:
                         return False
                     if cell.terrain != puzzle.terrain:
                         return False
-
-        if puzzle.type == PuzzleType.Terrain.value:
-            for cell in puzzle.cells:
+        else:
+            for cell in self.shape_helper.GetShape(shape):
                 # 计算旋转后的相对坐标
                 rx, ry = rotate_point(cell[0], cell[1], rotate)
                 # 计算实际坐标
@@ -104,9 +105,7 @@ class Manager:
                 # 检查坐标是否在地图范围内
                 if ax < 0 or ax >= self.Desktop.rows or ay < 0 or ay >= self.Desktop.cols:
                     return False
-                # 对于地形，我们只需要检查位置是否在地图范围内
         return True
-
 
     def GetPuzzleCells(self, x, y, puzzle: Puzzle, rotate):
         # 获得puzzle本身的格子
@@ -262,10 +261,9 @@ class Manager:
         # 计算克制关系
         pass
 
-    def Place(self, player: Player, x, y, puzzle_id, rotate=0):
+    def Place(self, player: Player, x, y, puzzle: Puzzle, rotate=0):
         if self.Desktop is None:
             return False
-        puzzle = self.puzzle_objs.get(puzzle_id)        
         # Set the owner of the puzzle
         if self.Placeable(player, x, y, puzzle, rotate):
             puzzle.owner = player.name
@@ -296,16 +294,24 @@ class Manager:
         ret['puzzle_deck'] = self.puzzle_deck.Serialize()
         ret['setting'] = self.setting
         ret['puzzle_objs'] = self.puzzle_objs
-        ret['players'] = self.players
+        ret['players'] = {name: player.Serialize() for name, player in self.players.items()}
         return ret
 
     def Deserialize(self, data):
         if self.Desktop is None:
             return False
         self.Desktop.Deserialize(data)
+        self.players = {name: Player().Deserialize(player) for name, player in data['players'].items()}
         return True
 
 if __name__ == '__main__':
     manager = Manager()
     manager.StartGame()
+    manager.AddPlayer('Player1')
+    manager.AddPlayer('Player2')
+    manager.AddPlayer('Player3')
+    manager.AddPlayer('Player4')
+    puzzle = manager.puzzle_deck.Draw()     
+    print(puzzle.dump())    # {'puzzle_id': 26, 'terrainType': 4, 'shape': 5}
+    manager.Place(manager.players['Player1'], 0, 0, puzzle, rotate=1)
     print(manager.Serialize())

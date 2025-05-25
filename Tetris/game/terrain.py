@@ -1,4 +1,7 @@
 from enum import Enum
+from configparser import ConfigParser
+import os
+import xml.etree.ElementTree as ET
 
 class Rotate(Enum):
     Zero = 0
@@ -57,6 +60,63 @@ class Shape(Enum):
     Rectangle6 = 9  # 6格矩形
     Rectangle8 = 10 # 8格矩形
     Line = 11       # 3格直线
+
+
+class ShapeHelper:
+    def __init__(self):
+        self.config_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data', 'Shapes.xml')
+        self.shapes = dict()
+        self.ReadConfig()
+    
+    def ReadConfig(self):
+        """从 XML 配置文件中读取形状定义"""
+        try:
+            tree = ET.parse(self.config_path)
+            root = tree.getroot()
+            for shape_elem in root.findall('Shape'):
+                # 解析基本属性
+                name = shape_elem.find('Name').text
+                shape_type = Shape[name]  # 使用枚举名称获取对应的Shape枚举值
+                
+                # 解析网格
+                grid = []
+                for row in shape_elem.find('Grid').findall('Row'):
+                    # 处理可能的逗号分隔的情况
+                    if ',' in row.text:
+                        grid.append([int(x) for x in row.text.split(',')])
+                    else:
+                        grid.append([int(x) for x in row.text])
+                
+                # 找到第一个1的位置作为中心点
+                center_x = -1
+                center_y = -1
+                for y, row in enumerate(grid):
+                    for x, cell in enumerate(row):
+                        if cell == 1:
+                            if center_x == -1:  # 找到第一个1
+                                center_x = x
+                                center_y = y
+                
+                # 生成相对坐标
+                cells = []
+                for y, row in enumerate(grid):
+                    for x, cell in enumerate(row):
+                        if cell == 1:
+                            # 计算相对于中心的偏移
+                            rel_x = x - center_x
+                            rel_y = y - center_y
+                            cells.append((rel_x, rel_y))
+                
+                # 将形状添加到字典中
+                self.shapes[shape_type] = tuple(cells)
+                
+        except Exception as e:
+            print(f"Error reading shape config: {e}")
+            raise
+    
+    def GetShape(self, shape: Shape):
+        """获取指定形状的相对坐标元组"""
+        return self.shapes.get(shape, None)
 
 
 class Forces(Enum):
@@ -150,3 +210,9 @@ def load_puzzle(data):
     puzzle = Puzzle()
     puzzle.load(data)
     return puzzle
+
+
+if __name__ == '__main__':
+    shape_helper = ShapeHelper()
+    shape_helper.ReadConfig()
+    print(shape_helper.GetShape(Shape.I))   # ((0, 0), (0, 1), (0, 2), (0, 3))

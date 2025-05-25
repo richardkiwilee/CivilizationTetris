@@ -5,22 +5,18 @@ class PlayerResource(Enum):
     Food = 1        # 粮食
     Wood = 2        # 木头
     Stone = 3       # 石头
-    Iron = 4        # 铁
-    Horse = 5       # 马
     Faith = 6       # 信仰
     Decree = 7      # 政令点数
     Citizen = 8    # 市民
 
 class Player:
-    def __init__(self, name: str):
-        self.name = name
+    def __init__(self):
+        self.name = None
         self.resources = {
             PlayerResource.Gold.value: 100,
             PlayerResource.Food.value: 100,
             PlayerResource.Wood.value: 100,
             PlayerResource.Stone.value: 0,
-            PlayerResource.Iron.value: 0,
-            PlayerResource.Horse.value: 0,
             PlayerResource.Faith.value: 0,
             PlayerResource.Decree.value: 0,
             PlayerResource.Citizen.value: 0
@@ -35,3 +31,22 @@ class Player:
     def Cost(self, cost: dict):
         for resource in cost:
             self.resources[resource] -= cost[resource]
+        
+    def Serialize(self):
+        ret = dict()
+        ret['name'] = self.name
+        ret['resources'] = self.resources
+        return ret
+
+    def Deserialize(self, data):
+        self.name = data['name']
+        self.resources = data['resources']
+
+
+def load_players(data: list) -> list:
+    players = []
+    for player in data:
+        player = Player()
+        player.Deserialize(player)
+        players.append(player)
+    return players
