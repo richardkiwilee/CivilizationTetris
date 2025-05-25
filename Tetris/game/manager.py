@@ -12,17 +12,30 @@ class Manager:
         self.Desktop = None
         self.puzzle_deck = None
         self.setting = dict()
-        self.setMapSize(12, 12)
-        self.buildings = dict()
+        self.setMapSize(7, 4)
         self.puzzle_objs = dict()
 
-    def setMapSize(self, row, col):
-        self.setting['map_row'] = row
-        self.setting['map_col'] = col
+    def setMapSize(self, block_size, block_count):
+        self.setting['block_size'] = block_size
+        self.setting['block_count'] = block_count
+        _1 = block_count * block_count * block_size * block_size
+        _2 = _1 / 4 / 7 / 28
+        if _2 == int(_2):
+            _2 = int(max(int(_2), 1))
+        else:
+            _2 = int(_2) + 1
+        self.setting['TerrainRatio'][Terrain.Plain.value] = _2 * 8
+        self.setting['TerrainRatio'][Terrain.Forest.value] = _2 * 8
+        self.setting['TerrainRatio'][Terrain.River.value] = _2 * 5
+        self.setting['TerrainRatio'][Terrain.Farmland.value] = _2 * 0
+        self.setting['TerrainRatio'][Terrain.Mountain.value] = _2 * 5
+        self.setting['TerrainRatio'][Terrain.Barren.value] = _2 * 2
+
 
     def StartGame(self):
-        self.Desktop = Desktop(self.setting['map_row'], self.setting['map_col'])
-        self.puzzle_deck = Deck()
+        size = self.setting['block_size'] * self.setting['block_count']
+        self.Desktop = Desktop(size, size)
+        self.puzzle_deck = Deck(self.setting)
 
     def dumpPlayerInfo(self) -> Dict[str, Any]:
         info = dict()
@@ -203,66 +216,73 @@ class Manager:
                     puzzles.add(adj_puzzle)
         return puzzles
 
-    def ActiveBuilding(self, player: Player, x, y):
+    def ActiveBuilding(self, player: Player, puzzle_id):
         if self.Desktop is None:
             return False
-        puzzle = self.GetPuzzle(x, y)
+        puzzle = self.puzzle_objs.get(puzzle_id)
         if not self.Accessible(player, puzzle):
             return False
         if puzzle.isBuilding() and player.ResourceEnough(puzzle.activate_cost):
             player.Cost(puzzle.activate_cost)
-            puzzle.Activate()
+            pass
             return True
         return False
 
-    def UpgradeBuilding(self, player: Player, x, y, building):
+    def UpgradeBuilding(self, player: Player, puzzle_id):
         if self.Desktop is None:
             return False    
-        puzzle = self.GetPuzzle(x, y)
+        puzzle = self.puzzle_objs.get(puzzle_id)
         if not self.Accessible(player, puzzle):
             return False
-        if puzzle.isBuilding() and puzzle.level < puzzle.max_level:
+        if puzzle.isBuilding() and puzzle.building_level < puzzle.max_level:
             if player.ResourceEnough(puzzle.upgrade_cost):
                 player.Cost(puzzle.upgrade_cost)
-                puzzle.Upgrade()
+                puzzle.building_level += 1
                 return True
         return False
 
-    def Attack(self, player, x1, y1, x2, y2):
+    def Attack(self, player, puzzle_id, target_puzzle_id):
         if self.Desktop is None:
             return False
-            
-        attacker = self.GetPuzzle(x1, y1)
-        defender = self.GetPuzzle(x2, y2)
+        attacker = self.puzzle_objs.get(puzzle_id)
+        target = self.puzzle_objs.get(target_puzzle_id)
         if not self.Accessible(player, attacker):
             return False
-        if defender is None:
+        if attacker is None or target is None:
             return False
         # 计算进攻路线
         # 计算克制关系
         pass
 
-    def Place(self, player: Player, x, y, puzzle: Puzzle, rotate=0):
+    def Place(self, player: Player, x, y, puzzle_id, rotate=0):
         if self.Desktop is None:
             return False
+        puzzle = self.puzzle_objs.get(puzzle_id)        
         # Set the owner of the puzzle
         if self.Placeable(player, x, y, puzzle, rotate):
             puzzle.owner = player.name
         # Try to place the puzzle on the desktop
         if player.ResourceEnough(puzzle.place_cost):
             player.Cost(puzzle.place_cost)
-            self.puzzle_objs[puzzle.id] = puzzle
-            for cell in puzzle.cells:
+            puzzle.x = x
+            puzzle.y = y
+            puzzle.rotation = rotate            
+            for cell in puzzle.cells:   # type: Cell
                 # 计算旋转后的相对坐标
-                rx, ry = rotate_point(cell[0], cell[1], puzzle.rotation)
+                rx, ry = rotate_point(cell[0], cell[1], rotate)
                 # 计算实际坐标
                 ax, ay = x + rx, y + ry
                 # 设置坐标
                 cell = self.Desktop.GetCell(ax, ay)
-                cell.puzzle_id = puzzle.id
-                cell.owner = player.name
-                cell.terrain = puzzle.terrain
-                cell.triggered_buildings = set()
+                cell.owner  = player.name
+                cell.terrainType = puzzle.terrainType
+                cell.puzzle_id = puzzle.puzzle_id   
+                cell.building_id = puzzle.building_id
             # 放置完后 触发效果
             pass
         return True
+
+
+if __name__ == '__main__':
+    manager = Manager()
+    manager.StartGame()

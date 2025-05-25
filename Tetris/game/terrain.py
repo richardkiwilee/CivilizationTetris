@@ -17,27 +17,23 @@ def rotate_point(px, py, rotation):
         return py, -px
     return px, py
 
-class PuzzleType(Enum):
-    Terrain = 0
-    Building = 1
-
 class Terrain(Enum):
-    Building = 0    # 建筑
     Plain = 1       # 平原
     Forest = 2      # 森林
     River = 3       # 河流
     Farmland = 4    # 农田
     Mountain = 5    # 山地
     Barren = 6      # 贫瘠
-    Fertile = 7     # 肥沃, 同时视为平原、森林、河流
-    Urban = 8       # 城市
+    Urban = 7       # 城市
+    Building = 8    # 建筑  具体建筑类型通过Building查询
 
-class Cell:
-    def __init__():
-        self.terrain = None
-        self.owner = None
-        self.puzzle_id = None
-        self.triggered_buildings = set()      # 每个建筑最多对单元格激发一次
+class BuildingType(Enum):
+    Production = 1          # 生产建筑
+    Military = 2            # 军事建筑
+    Religion = 3            # 宗教建筑
+    Nobility = 4            # 贵族建筑
+    Unique = 5              # 唯一建筑
+    Special = 6             # 特殊建筑
 
 class BuildingTag(Enum):
     Production = 1          # 生产建筑
@@ -65,53 +61,65 @@ class Shape(Enum):
 
 class Forces(Enum):
     Normal = 0     # 不受任何克制
-    Sword = 1      # 剑
-    Axe = 2        # 斧
-    Arrow = 3      # 箭
-    Spear = 4      # 矛
-    Horse = 5      # 马
-    Heavy = 6      # 重装
+    Light = 1      # 轻装
+    Heavy = 2      # 重装
+    Range = 3      # 远程
+
+
+class Cell:
+    def __init__(self):
+        self.owner = None
+        self.terrainType = None
+        self.puzzle_id = None
+        self.building_id = None
+
+    def dump(self):
+        ret = dict()
+        if self.owner:  
+            ret['owner'] = self.owner
+        if self.terrainType:  
+            ret['terrainType'] = self.terrainType
+        if self.puzzle_id:  
+            ret['puzzle_id'] = self.puzzle_id
+        if self.building_id:  
+            ret['building_id'] = self.building_id
+        return ret
+
 
 class Puzzle:
-    def __init__(self, _type: PuzzleType, shape: Shape, terrain: Terrain, tags=[]):
-        self.id = 0
-        self.x = 0
-        self.y = 0
-        self.rotation = Rotate.Zero.value
-        self.name = ""
-        self.type = _type
-        self.shape = shape
-        self.terrain = terrain
-        self.tags = tags
-        self.owner = None
-        self.army = 0
-        self.army_owner = None
-        self.cells = set()
-        self.activeable = False
-        self.place_cost = dict()
-        self.activate_cost = dict()
-        self.upgrade_cost = dict()
-        self.max_level = 0
-        self.level = 0
-        self.effect_range = 0
-        self.triggered_cells = set()        # 每个单元格一回合最多激发一次
-        self.triggered_buildings = set()    # 每个建筑一回合最多激发一次
+    def __init__():
+        self.puzzle_id = None   # 拼块id
+        self.x = None   # 中心坐标x
+        self.y = None   # 中心坐标y
+        self.rotation = None   # 旋转角度
+        
+        self.terrainType = None   # 地形类型
+        self.shape = None   # 形状        
+        self.building_id = None   # 建筑id 如果是None则表示这个拼块不是一个建筑
+        self.building_level = None   # 建筑等级 如果是None则表示这个拼块不是一个建筑
+        self.army = 0   # 军队数量  只有这个拼块是一个建筑的情况下才可用
+        self.army_owner = None   # 军队所有者  只有这个拼块是一个建筑的情况下才可用
 
-    def Activate(self):
-        if self.terrain != Terrain.Building.value:
-            return
-        pass
-
-    def Upgrade(self):
-        if self.terrain != Terrain.Building.value:
-            return
-        pass
-
-    def StartTurn(self):
-        pass
-
-    def EndTurn(self):
-        pass
-
-    def isBuilding(self):
-        return self.terrain == Terrain.Building.value
+    def dump(self):
+        ret = dict()
+        if self.puzzle_id:  
+            ret['puzzle_id'] = self.puzzle_id
+        if self.x:  
+            ret['x'] = self.x
+        if self.y:  
+            ret['y'] = self.y
+        if self.terrainType:
+            ret['terrainType'] = self.terrainType
+        if self.shape:  
+            ret['shape'] = self.shape
+        if self.rotation:  
+            ret['rotation'] = self.rotation
+        if self.building_id:  
+            ret['building_id'] = self.building_id
+        if self.building_level:  
+            ret['building_level'] = self.building_level
+        if self.army:  
+            ret['army'] = self.army
+        if self.army_owner:  
+            ret['army_owner'] = self.army_owner
+        return ret
