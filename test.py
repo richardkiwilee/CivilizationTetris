@@ -398,6 +398,34 @@ class Tetris:
         pygame.draw.rect(self.screen, BLACK, (x, y, text_rect.width + padding * 2, text_rect.height + padding * 2), 1)
         self.screen.blit(text_surface, (x + padding, y + padding))
 
+    def draw_tooltip(self):
+        if not self.hover_piece or not hasattr(self.hover_piece, 'get'):
+            return
+            
+        terrain = self.hover_piece.get('terrain')
+        if not terrain:
+            return
+            
+        # Render tooltip text
+        text = f'Terrain: {terrain.name}'
+        text_surface = self.tooltip_font.render(text, True, BLACK)
+        text_rect = text_surface.get_rect()
+        
+        # Position tooltip near mouse but ensure it stays on screen
+        x, y = self.mouse_pos
+        padding = 5
+        
+        # Adjust position to keep tooltip on screen
+        if x + text_rect.width + padding * 2 > SCREEN_WIDTH:
+            x = SCREEN_WIDTH - text_rect.width - padding * 2
+        if y + text_rect.height + padding * 2 > SCREEN_HEIGHT:
+            y = y - text_rect.height - padding * 2
+        
+        # Draw tooltip background and border
+        pygame.draw.rect(self.screen, CREAM, (x, y, text_rect.width + padding * 2, text_rect.height + padding * 2))
+        pygame.draw.rect(self.screen, BLACK, (x, y, text_rect.width + padding * 2, text_rect.height + padding * 2), 1)
+        self.screen.blit(text_surface, (x + padding, y + padding))
+
     def get_hovered_piece(self, mouse_pos):
         x, y = mouse_pos
         
@@ -497,11 +525,11 @@ class Tetris:
                             # Try to place the selected piece
                             self.handle_grid_click()
                     elif event.button == 3:  # Right click
-                        if self.selected_piece:
-                            self.rotate_piece(self.selected_piece)
+                        # 右键取消选择
+                        self.selected_piece = None
                 elif event.type == pygame.MOUSEWHEEL and not self.game_over:
                     if self.selected_piece:
-                        # 滚轮向上或向下都会触发旋转
+                        # 使用滚轮旋转
                         self.rotate_piece(self.selected_piece)
 
             # Update tooltip visibility
