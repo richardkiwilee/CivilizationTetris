@@ -87,31 +87,6 @@ class Manager:
         return True
 
 
-    def Place(self, player: Player, x, y, puzzle: Puzzle, rotate=0):
-        if self.Desktop is None:
-            return False
-        # Set the owner of the puzzle
-        if self.Placeable(player, x, y, puzzle, rotate):
-            puzzle.owner = player.name
-        # Try to place the puzzle on the desktop
-        if player.ResourceEnough(puzzle.place_cost):
-            player.Cost(puzzle.place_cost)
-            self.puzzle_objs[puzzle.id] = puzzle
-            for cell in puzzle.cells:
-                # 计算旋转后的相对坐标
-                rx, ry = rotate_point(cell[0], cell[1], puzzle.rotation)
-                # 计算实际坐标
-                ax, ay = x + rx, y + ry
-                # 设置坐标
-                cell = self.Desktop.GetCell(ax, ay)
-                cell.puzzle_id = puzzle.id
-                cell.owner = player.name
-                cell.terrain = puzzle.terrain
-                cell.triggered_buildings = set()
-            # 放置完后 触发效果
-            pass
-        return True
-
     def GetPuzzleCells(self, x, y, puzzle: Puzzle, rotate):
         # 获得puzzle本身的格子
         cells = set()
@@ -266,3 +241,28 @@ class Manager:
         # 计算进攻路线
         # 计算克制关系
         pass
+
+    def Place(self, player: Player, x, y, puzzle: Puzzle, rotate=0):
+        if self.Desktop is None:
+            return False
+        # Set the owner of the puzzle
+        if self.Placeable(player, x, y, puzzle, rotate):
+            puzzle.owner = player.name
+        # Try to place the puzzle on the desktop
+        if player.ResourceEnough(puzzle.place_cost):
+            player.Cost(puzzle.place_cost)
+            self.puzzle_objs[puzzle.id] = puzzle
+            for cell in puzzle.cells:
+                # 计算旋转后的相对坐标
+                rx, ry = rotate_point(cell[0], cell[1], puzzle.rotation)
+                # 计算实际坐标
+                ax, ay = x + rx, y + ry
+                # 设置坐标
+                cell = self.Desktop.GetCell(ax, ay)
+                cell.puzzle_id = puzzle.id
+                cell.owner = player.name
+                cell.terrain = puzzle.terrain
+                cell.triggered_buildings = set()
+            # 放置完后 触发效果
+            pass
+        return True

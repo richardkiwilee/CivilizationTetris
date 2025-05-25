@@ -60,7 +60,16 @@ GRID_WIDTH = 26
 GRID_HEIGHT = 26
 PLAYER_BAR_HEIGHT = 50  # Height of the player score bar
 TOOLBAR_HEIGHT = 100  # Height of the bottom toolbar
-SCREEN_WIDTH = BLOCK_SIZE * (GRID_WIDTH + 8)  # Extra space for next piece and score
+# UI Constants
+PLAYER_SLOTS = 4  # Number of player slots
+PLAYER_SLOT_HEIGHT = 100  # Height of each player slot
+PLAYER_SLOT_WIDTH = 200  # Width of player slots area
+BUTTON_HEIGHT = 40
+BUTTON_WIDTH = 120
+BUTTON_MARGIN = 10
+
+# Screen dimensions
+SCREEN_WIDTH = BLOCK_SIZE * GRID_WIDTH + PLAYER_SLOT_WIDTH  # Main grid + player slots
 SCREEN_HEIGHT = PLAYER_BAR_HEIGHT + BLOCK_SIZE * GRID_HEIGHT + TOOLBAR_HEIGHT
 
 # Tetromino shapes
@@ -90,6 +99,13 @@ class Tetris:
         self.hover_piece: Optional[Dict[str, Any]] = None
         self.show_tooltip = False
         self.tooltip_font = pygame.font.Font(None, 24)
+        # Button related attributes
+        self.button_font = pygame.font.Font(None, 24)
+        button_x = BLOCK_SIZE * GRID_WIDTH + (PLAYER_SLOT_WIDTH - BUTTON_WIDTH) // 2  # 放在玩家槽下方中央
+        self.buttons = [
+            {'text': 'End Turn', 'rect': pygame.Rect(button_x, SCREEN_HEIGHT - TOOLBAR_HEIGHT + 20, BUTTON_WIDTH, BUTTON_HEIGHT)},
+            {'text': 'Settings', 'rect': pygame.Rect(button_x, SCREEN_HEIGHT - TOOLBAR_HEIGHT + 70, BUTTON_WIDTH, BUTTON_HEIGHT)}
+        ]
         self.reset_game()
 
     def reset_game(self):
@@ -130,10 +146,10 @@ class Tetris:
                 PLAYER_BAR_HEIGHT <= y < PLAYER_BAR_HEIGHT + GRID_HEIGHT * BLOCK_SIZE)
 
     def is_mouse_in_toolbar(self, mouse_pos):
-        # Check if mouse is in the toolbar area
+        # Check if mouse is in the toolbar area (only left side where pieces are)
         x, y = mouse_pos
         toolbar_y = PLAYER_BAR_HEIGHT + GRID_HEIGHT * BLOCK_SIZE
-        return (0 <= x < SCREEN_WIDTH and
+        return (0 <= x < BLOCK_SIZE * GRID_WIDTH and
                 toolbar_y <= y < toolbar_y + TOOLBAR_HEIGHT)
 
     def new_piece(self):
@@ -227,74 +243,90 @@ class Tetris:
             surface.fill((128, 128, 128, alpha))  # 使用灰色作为后备
             return surface
 
-    def draw(self):
-        # Clear screen
-        self.screen.fill(CREAM)  # 使用奶白色背景
-        
-        # Draw player score bar
-        pygame.draw.rect(self.screen, WHITE, [0, 0, SCREEN_WIDTH, PLAYER_BAR_HEIGHT])
-        pygame.draw.line(self.screen, BLACK, (0, PLAYER_BAR_HEIGHT), (SCREEN_WIDTH, PLAYER_BAR_HEIGHT), 2)
-        
-        # Draw grid
-        for i in range(GRID_HEIGHT):
-            for j in range(GRID_WIDTH):
-                pygame.draw.rect(self.screen, WHITE,
-                               [j * BLOCK_SIZE, i * BLOCK_SIZE + PLAYER_BAR_HEIGHT, BLOCK_SIZE, BLOCK_SIZE], 1)
-                if self.grid[i][j]['terrain'] is not None:
-                    terrain = self.grid[i][j]['terrain']
-                    if self.terrain_images[terrain] is not None:
-                        self.screen.blit(self.terrain_images[terrain],
-                                        (j * BLOCK_SIZE, i * BLOCK_SIZE + PLAYER_BAR_HEIGHT))
+    def draw_piece(self, piece, x, y, alpha=255):
+        for i, row in enumerate(piece['shape']):
+            for j, cell in enumerate(row):
+                if cell:
+                    if self.terrain_images[piece['terrain']] is not None:
+                        surface = self.terrain_images[piece['terrain']].copy()
+                        surface.set_alpha(alpha)
+                        self.screen.blit(surface, (x + j * BLOCK_SIZE, y + i * BLOCK_SIZE))
                     else:
-                        pygame.draw.rect(self.screen, TERRAIN_COLORS[terrain],
-                                       [j * BLOCK_SIZE, i * BLOCK_SIZE + PLAYER_BAR_HEIGHT, BLOCK_SIZE - 1, BLOCK_SIZE - 1])
+                        pygame.draw.rect(self.screen, (128, 128, 128),
+                                       [x + j * BLOCK_SIZE, y + i * BLOCK_SIZE, BLOCK_SIZE - 1, BLOCK_SIZE - 1])
+
+    def draw(self):
+        self.screen.fill(CREAM)
+
+        # Draw player bar
+        pygame.draw.rect(self.screen, WHITE, (0, 0, SCREEN_WIDTH, PLAYER_BAR_HEIGHT))
+
+        # Draw grid
+        for y in range(GRID_HEIGHT):
+            for x in range(GRID_WIDTH):
+                pygame.draw.rect(self.screen, BLACK,
+                             (x * BLOCK_SIZE, y * BLOCK_SIZE + PLAYER_BAR_HEIGHT,
+                              BLOCK_SIZE - 1, BLOCK_SIZE - 1), 1)
+                
+                # Draw terrain if exists
+                terrain = self.grid[y][x]['terrain']
+                if terrain:
+                    img = self.terrain_images.get(terrain)
+                    if img:
+                        self.screen.blit(img, 
+                                        (x * BLOCK_SIZE, 
+                                         y * BLOCK_SIZE + PLAYER_BAR_HEIGHT))
+
+        # Draw player slots area (black background)
+        player_slots_x = BLOCK_SIZE * GRID_WIDTH
+        pygame.draw.rect(self.screen, BLACK,
+                       (player_slots_x, PLAYER_BAR_HEIGHT,
+                        PLAYER_SLOT_WIDTH, BLOCK_SIZE * GRID_HEIGHT))
+
+        # Draw player slots
+        slot_height = (BLOCK_SIZE * GRID_HEIGHT) // PLAYER_SLOTS
+        for i in range(PLAYER_SLOTS):
+            y = PLAYER_BAR_HEIGHT + i * slot_height
+            # Draw slot border
+            pygame.draw.rect(self.screen, WHITE,
+                           (player_slots_x, y,
+                            PLAYER_SLOT_WIDTH, slot_height), 1)
 
         # Draw toolbar background
         toolbar_y = PLAYER_BAR_HEIGHT + GRID_HEIGHT * BLOCK_SIZE
-        pygame.draw.rect(self.screen, WHITE, [0, toolbar_y, SCREEN_WIDTH, TOOLBAR_HEIGHT])
-        pygame.draw.line(self.screen, BLACK, (0, toolbar_y), (SCREEN_WIDTH, toolbar_y), 2)
+        pygame.draw.rect(self.screen, WHITE,
+                       (0, toolbar_y, SCREEN_WIDTH, TOOLBAR_HEIGHT))
 
-        # Draw toolbar pieces
-        piece_spacing = SCREEN_WIDTH // (len(self.toolbar_pieces) + 1)
+        # Draw toolbar pieces in the left side
+        available_width = BLOCK_SIZE * GRID_WIDTH  # 使用整个左侧区域
+        piece_spacing = available_width // (len(self.toolbar_pieces) + 1)
         for idx, piece in enumerate(self.toolbar_pieces):
             x = piece_spacing * (idx + 1) - (len(piece['shape'][0]) * BLOCK_SIZE) // 2
             y = toolbar_y + (TOOLBAR_HEIGHT - len(piece['shape']) * BLOCK_SIZE) // 2
             
-            for i, row in enumerate(piece['shape']):
-                for j, cell in enumerate(row):
-                    if cell:
-                        if self.terrain_images[piece['terrain']] is not None:
-                            self.screen.blit(self.terrain_images[piece['terrain']],
-                                            (x + j * BLOCK_SIZE, y + i * BLOCK_SIZE))
-                        else:
-                            pygame.draw.rect(self.screen, piece['color'],
-                                           [x + j * BLOCK_SIZE, y + i * BLOCK_SIZE, BLOCK_SIZE - 1, BLOCK_SIZE - 1])
+            if piece['is_valid']:
+                self.draw_piece(piece, x, y)
+            else:
+                self.draw_piece(piece, x, y, alpha=128)
+
+        # Draw buttons
+        for button in self.buttons:
+            pygame.draw.rect(self.screen, BLACK, button['rect'], 2)
+            text = self.button_font.render(button['text'], True, BLACK)
+            text_rect = text.get_rect(center=button['rect'].center)
+            self.screen.blit(text, text_rect)
 
         # Draw selected piece following mouse if exists
         if self.selected_piece and self.is_mouse_in_grid(self.mouse_pos):
             grid_x, grid_y = self.get_grid_pos_from_mouse(self.mouse_pos)
-            preview = {
-                **self.selected_piece,
-                'x': grid_x,
-                'y': grid_y
-            }
-            is_valid = self.check_valid_placement(preview) and not self.check_overlap(preview)
-            if is_valid:
-                preview_surface = self.create_transparent_surface(self.selected_piece['terrain'], alpha=160)
-            else:
-                # For invalid placement, use red rectangle
-                preview_surface = pygame.Surface((BLOCK_SIZE - 1, BLOCK_SIZE - 1))
-                preview_surface.fill(RED)
-                preview_surface.set_alpha(160)
-            
-            for i, row in enumerate(self.selected_piece['shape']):
-                for j, cell in enumerate(row):
-                    if cell:
-                        self.screen.blit(
-                            preview_surface,
-                            ((grid_x + j) * BLOCK_SIZE,
-                             (grid_y + i) * BLOCK_SIZE + PLAYER_BAR_HEIGHT)
-                        )
+            x = grid_x * BLOCK_SIZE
+            y = grid_y * BLOCK_SIZE + PLAYER_BAR_HEIGHT
+            self.draw_piece(self.selected_piece, x, y, alpha=128)
+
+        # Draw tooltip if needed
+        if self.show_tooltip and self.hover_piece:
+            self.draw_tooltip()
+
 
         # Draw score and level
         font = pygame.font.Font(None, 36)
@@ -353,9 +385,10 @@ class Tetris:
         # Check toolbar pieces
         if self.is_mouse_in_toolbar(mouse_pos):
             toolbar_y = PLAYER_BAR_HEIGHT + GRID_HEIGHT * BLOCK_SIZE
-            for i, piece in enumerate(self.toolbar_pieces):
-                piece_x = i * (BLOCK_SIZE * 4)
-                piece_y = toolbar_y
+            piece_spacing = BLOCK_SIZE * GRID_WIDTH // (len(self.toolbar_pieces) + 1)
+            for idx, piece in enumerate(self.toolbar_pieces):
+                piece_x = piece_spacing * (idx + 1) - (len(piece['shape'][0]) * BLOCK_SIZE) // 2
+                piece_y = toolbar_y + (TOOLBAR_HEIGHT - len(piece['shape']) * BLOCK_SIZE) // 2
                 piece_width = len(piece['shape'][0]) * BLOCK_SIZE
                 piece_height = len(piece['shape']) * BLOCK_SIZE
                 
@@ -373,21 +406,32 @@ class Tetris:
         return None
 
     def handle_toolbar_click(self):
-        piece_spacing = SCREEN_WIDTH // (len(self.toolbar_pieces) + 1)
-        # Calculate the center positions of each piece
+        # Get mouse position
+        x, y = self.mouse_pos
+        toolbar_y = PLAYER_BAR_HEIGHT + GRID_HEIGHT * BLOCK_SIZE
+
+        # Calculate piece positions using only the left side width
+        available_width = BLOCK_SIZE * GRID_WIDTH
+        piece_spacing = available_width // (len(self.toolbar_pieces) + 1)
+        
+        # Check each piece
         for idx, piece in enumerate(self.toolbar_pieces):
-            piece_center_x = piece_spacing * (idx + 1)
+            piece_x = piece_spacing * (idx + 1) - (len(piece['shape'][0]) * BLOCK_SIZE) // 2
+            piece_y = toolbar_y + (TOOLBAR_HEIGHT - len(piece['shape']) * BLOCK_SIZE) // 2
             piece_width = len(piece['shape'][0]) * BLOCK_SIZE
-            piece_x = piece_center_x - piece_width // 2
+            piece_height = len(piece['shape']) * BLOCK_SIZE
+
             # Check if click is within piece bounds
-            if piece_x <= self.mouse_pos[0] < piece_x + piece_width:
-                self.selected_piece = {
-                    **self.toolbar_pieces[idx],
-                    'toolbar_idx': idx  # Store the index for later
-                }
+            if (piece_x <= x < piece_x + piece_width and
+                piece_y <= y < piece_y + piece_height):
+                if piece['is_valid']:
+                    self.selected_piece = piece
                 break
 
     def handle_grid_click(self):
+        if not self.selected_piece:
+            return
+            
         grid_x, grid_y = self.get_grid_pos_from_mouse(self.mouse_pos)
         preview = {
             'shape': self.selected_piece['shape'],
@@ -398,9 +442,11 @@ class Tetris:
         if self.check_valid_placement(preview) and not self.check_overlap(preview):
             self.preview_piece = preview
             self.lock_piece()
-            # Replace the used piece with a new random one
-            toolbar_idx = self.selected_piece['toolbar_idx']
-            self.toolbar_pieces[toolbar_idx] = self.new_piece()
+            # Find the selected piece in toolbar_pieces and replace it
+            for i, piece in enumerate(self.toolbar_pieces):
+                if piece == self.selected_piece:
+                    self.toolbar_pieces[i] = self.new_piece()
+                    break
             self.selected_piece = None
 
     def run(self):
