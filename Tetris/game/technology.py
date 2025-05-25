@@ -1,4 +1,7 @@
-from Tetris.game.player import PlayerResource
+try:
+    from Tetris.game.player import PlayerResource
+except:
+    from player import PlayerResource
 
 
 class Technology:

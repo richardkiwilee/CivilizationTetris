@@ -260,7 +260,7 @@
             <Effect Type="Garrison" BounsCount="10/15/20" ArmyType="Light"/>
             <Effect Type="Connected" Terrain="Forest">
                 <Trigger Type="Transaction" From="Forest" To="Plain"/>
-                <BounsType="Army" BounsCount="3/4/5" ArmyType="Light"/>
+                <Trigger BounsType="Army" BounsCount="3/4/5" ArmyType="Light"/>
             </Effect>
         </Activate>
     </Building>

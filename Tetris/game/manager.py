@@ -13,6 +13,16 @@ except:
     from player import Player
 
 
+def rotate_point(x, y, rotate):
+    if rotate == 0:
+        return x, y
+    elif rotate == 1:
+        return y, -x
+    elif rotate == 2:
+        return -x, -y
+    elif rotate == 3:
+        return -y, x
+
 class Manager:
     def __init__(self):
         self.shape_helper = ShapeHelper()

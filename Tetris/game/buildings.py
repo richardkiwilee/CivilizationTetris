@@ -1,5 +1,9 @@
-from Tetris.game.player import *
-from Tetris.game.terrain import *
+try:
+    from Tetris.game.player import PlayerResource, Player
+    from Tetris.game.terrain import Terrain, Shape, Puzzle
+except:
+    from player import PlayerResource, Player
+    from terrain import Terrain, Shape, Puzzle
 
 import os
 import xml.etree.ElementTree as ET
@@ -20,19 +24,15 @@ class BuildingFactory:
                 building_id = int(building.get('id'))
                 name = building.get('Name')
                 shape = building.get('shape')
-                count = int(building.get('Count', 10))
                 tags = building.get('tags', '').split(',')
                 
                 # 创建建筑实例
-                building_instance = Building(
-                    _type=PuzzleType.Building,
-                    shape=Shape[shape],
-                    terrain=Terrain.Building,
-                    tags=[BuildingTag[tag.strip()] for tag in tags if tag.strip()]
-                )
+                building_instance = dict()
+                building_instance['id'] = building_id
+                building_instance['name'] = name
+                building_instance['shape'] = Shape[shape]
+                building_instance['tags'] = [tag.strip() for tag in tags if tag.strip()]
                 
-                # 设置建筑名称
-                building_instance.name = name
                 
                 # 解析升级成本
                 cost_element = building.find('Cost')
@@ -66,3 +66,8 @@ class BuildingFactory:
         """获取所有建筑实例"""
         return self.buildings
 
+if __name__ == '__main__':
+    main = BuildingFactory()
+    main.ReadConfig()
+    building = main.GetBuildingById(1)
+    print(building)

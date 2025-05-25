@@ -1,5 +1,6 @@
 import random
-from configparser import ConfigParser
+import os
+import xml.etree.ElementTree as ET
 try:
     from .terrain import Puzzle, Terrain, Shape
 except:
@@ -27,25 +28,34 @@ class Deck:
         self.init()
 
     def init(self):
-        config = ConfigParser()
-        config.read('data/Buildings.xml')
         index = 1
-        for section in config.sections():
-            count = int(config[section]['Count'])
-            for i in range(0, count):
-                puzzle = Puzzle()
-                puzzle.puzzle_id = index
-                puzzle.x = None
-                puzzle.y = None
-                puzzle.rotation = None
-                puzzle.terrainType = Terrain.Building.value
-                puzzle.shape = config[section]['shape']
-                puzzle.building_id = int(config[section]['id'])
-                puzzle.building_level = 0
-                puzzle.army = 0
-                puzzle.army_owner = None
-                self.draw_pile.append(puzzle)
-                index += 1
+        config_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data', 'Buildings.xml')
+        try:
+            tree = ET.parse(config_path)
+            root = tree.getroot()
+            
+            for building in root.findall('Building'):
+                # 解析基本属性
+                count = int(building.get('Count', '1'))
+                shape_name = building.get('shape')
+                building_id = int(building.get('id'))
+                
+                for i in range(count):
+                    puzzle = Puzzle()
+                    puzzle.puzzle_id = index
+                    puzzle.x = None
+                    puzzle.y = None
+                    puzzle.rotation = None
+                    puzzle.terrainType = Terrain.Building.value
+                    puzzle.shape = Shape[shape_name]
+                    puzzle.building_id = building_id
+                    puzzle.building_level = 0
+                    puzzle.army = 0
+                    puzzle.army_owner = None
+                    self.draw_pile.append(puzzle)
+                    index += 1
+        except Exception as e:
+            print(f"Error reading building config: {e}")
         for terrain in self.setting['TerrainRatio'].keys():
             for shape in [Shape.I, Shape.J, Shape.L, Shape.O, Shape.S, Shape.T, Shape.Z]:
                 puzzle = Puzzle()
