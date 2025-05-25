@@ -56,8 +56,10 @@ def load_terrain_images():
 
 # Game Constants 
 BLOCK_SIZE = 30
-GRID_WIDTH = 26
-GRID_HEIGHT = 26
+FILL_BLOCK = 7 # 定义 FILL_BLOCK * FILL_BLOCK是一个正方形的小分组
+BLOCK_COUNT = 4 # 定义每行和每列有多少个 FILL_BLOCK
+GRID_WIDTH = BLOCK_COUNT * FILL_BLOCK
+GRID_HEIGHT = BLOCK_COUNT * FILL_BLOCK
 PLAYER_BAR_HEIGHT = 50  # Height of the player score bar
 TOOLBAR_HEIGHT = 100  # Height of the bottom toolbar
 # UI Constants
@@ -264,6 +266,7 @@ class Tetris:
         # Draw grid
         for y in range(GRID_HEIGHT):
             for x in range(GRID_WIDTH):
+                # Draw cell borders (single line)
                 pygame.draw.rect(self.screen, BLACK,
                              (x * BLOCK_SIZE, y * BLOCK_SIZE + PLAYER_BAR_HEIGHT,
                               BLOCK_SIZE - 1, BLOCK_SIZE - 1), 1)
@@ -276,6 +279,22 @@ class Tetris:
                         self.screen.blit(img, 
                                         (x * BLOCK_SIZE, 
                                          y * BLOCK_SIZE + PLAYER_BAR_HEIGHT))
+        
+        # Draw block group borders (double line)
+        for block_y in range(BLOCK_COUNT):
+            for block_x in range(BLOCK_COUNT):
+                # Calculate the position of the block group
+                start_x = block_x * FILL_BLOCK * BLOCK_SIZE
+                start_y = block_y * FILL_BLOCK * BLOCK_SIZE + PLAYER_BAR_HEIGHT
+                width = FILL_BLOCK * BLOCK_SIZE
+                height = FILL_BLOCK * BLOCK_SIZE
+                
+                # Draw outer line
+                pygame.draw.rect(self.screen, BLACK,
+                               (start_x, start_y, width, height), 2)
+                # Draw inner line (offset by 2 pixels)
+                pygame.draw.rect(self.screen, BLACK,
+                               (start_x + 2, start_y + 2, width - 4, height - 4), 1)
 
         # Draw player slots area (black background)
         player_slots_x = BLOCK_SIZE * GRID_WIDTH
