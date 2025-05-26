@@ -23,13 +23,16 @@ class Player:
         }
 
     def ResourceEnough(self, cost: dict) -> bool:
-        print(cost)
+        if cost is None:
+            return True
         for resource, count in cost.items():
             if self.resources[resource] < count:
                 return False
         return True
 
     def Cost(self, cost: dict):
+        if cost is None:
+            return
         for resource, count in cost.items():
             self.resources[resource] -= count
         

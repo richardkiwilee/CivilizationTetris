@@ -3,7 +3,6 @@
     <!-- 4格形状 -->
     <Shape>
         <Name>I</Name>
-        <Type>4</Type>
         <Grid>
             <Row>1</Row>
             <Row>1</Row>
@@ -14,7 +13,6 @@
     
     <Shape>
         <Name>J</Name>
-        <Type>4</Type>
         <Grid>
             <Row>0,1</Row>
             <Row>0,1</Row>
@@ -24,7 +22,6 @@
     
     <Shape>
         <Name>L</Name>
-        <Type>4</Type>
         <Grid>
             <Row>1,0</Row>
             <Row>1,0</Row>
@@ -34,7 +31,6 @@
     
     <Shape>
         <Name>O</Name>
-        <Type>4</Type>
         <Grid>
             <Row>1,1</Row>
             <Row>1,1</Row>
@@ -43,7 +39,6 @@
     
     <Shape>
         <Name>S</Name>
-        <Type>4</Type>
         <Grid>
             <Row>0,1,1</Row>
             <Row>1,1,0</Row>
@@ -52,7 +47,6 @@
     
     <Shape>
         <Name>T</Name>
-        <Type>4</Type>
         <Grid>
             <Row>1,1,1</Row>
             <Row>0,1,0</Row>
@@ -61,7 +55,6 @@
     
     <Shape>
         <Name>Z</Name>
-        <Type>4</Type>
         <Grid>
             <Row>1,1,0</Row>
             <Row>0,1,1</Row>
@@ -71,7 +64,6 @@
     <!-- 3格形状 -->
     <Shape>
         <Name>Corner</Name>
-        <Type>3</Type>
         <Grid>
             <Row>1,1</Row>
             <Row>1,0</Row>
@@ -80,7 +72,6 @@
     
     <Shape>
         <Name>Line</Name>
-        <Type>3</Type>
         <Grid>
             <Row>1</Row>
             <Row>1</Row>
@@ -91,7 +82,6 @@
     <!-- 2格形状 -->
     <Shape>
         <Name>Two</Name>
-        <Type>2</Type>
         <Grid>
             <Row>1</Row>
             <Row>1</Row>
@@ -101,7 +91,6 @@
     <!-- 1格形状 -->
     <Shape>
         <Name>Cell</Name>
-        <Type>1</Type>
         <Grid>
             <Row>1</Row>
         </Grid>
@@ -110,7 +99,6 @@
     <!-- 特殊形状 -->
     <Shape>
         <Name>Rectangle6</Name>
-        <Type>6</Type>
         <Grid>
             <Row>1,1,1</Row>
             <Row>1,1,1</Row>
@@ -119,7 +107,6 @@
     
     <Shape>
         <Name>Rectangle8</Name>
-        <Type>8</Type>
         <Grid>
             <Row>1,1,1,1</Row>
             <Row>1,1,1,1</Row>

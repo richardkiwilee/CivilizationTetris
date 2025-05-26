@@ -2,9 +2,9 @@ import random
 import os
 import xml.etree.ElementTree as ET
 try:
-    from .terrain import Puzzle, Terrain, Shape
+    from .terrain import Puzzle, Terrain, ShapeHelper
 except:
-    from terrain import Puzzle, Terrain, Shape
+    from terrain import Puzzle, Terrain, ShapeHelper
 
 # 基于28*28的设置
 DEFAULT_MAP_SETTING = {
@@ -47,7 +47,7 @@ class Deck:
                     puzzle.y = None
                     puzzle.rotation = None
                     puzzle.terrainType = Terrain.Building.value
-                    puzzle.shape = Shape[shape_name]
+                    puzzle.shape = ShapeHelper().GetShape(shape_name)
                     puzzle.building_id = building_id
                     puzzle.building_level = 0
                     puzzle.army = 0
@@ -57,14 +57,15 @@ class Deck:
         except Exception as e:
             print(f"Error reading building config: {e}")
         for terrain in self.setting['TerrainRatio'].keys():
-            for shape in [Shape.I, Shape.J, Shape.L, Shape.O, Shape.S, Shape.T, Shape.Z]:
+            for _shape in ['I', 'J', 'L', 'O', 'S', 'T', 'Z']:
+                shape = ShapeHelper().GetShape(_shape)
                 puzzle = Puzzle()
                 puzzle.puzzle_id = index
                 puzzle.x = None
                 puzzle.y = None
                 puzzle.rotation = None
                 puzzle.terrainType = terrain
-                puzzle.shape = shape.value
+                puzzle.shape = shape
                 puzzle.building_id = None
                 puzzle.building_level = None
                 puzzle.army = None

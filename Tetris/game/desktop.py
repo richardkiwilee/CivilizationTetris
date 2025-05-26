@@ -12,6 +12,7 @@ class Desktop:
 
     def GetCell(self, x, y):
         if x < 0 or x >= self.rows or y < 0 or y >= self.cols:
+            print(f'GetCell {x}, {y} out of range')
             return None
         return self.GameMap[x][y]
 

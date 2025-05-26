@@ -2,15 +2,17 @@ from typing import List, Set, Dict, Any, Optional
 import random
 import traceback
 try:
+    from Tetris.game.terrain import load_puzzle
     from Tetris.game.desktop import Desktop
     from Tetris.game.deck import Deck, DEFAULT_MAP_SETTING
-    from Tetris.game.terrain import Puzzle, Terrain, Shape, ShapeHelper
+    from Tetris.game.terrain import Puzzle, Terrain, ShapeHelper
     from Tetris.game.player import Player
     from Tetris.game.buildings import BuildingFactory
 except:
+    from terrain import load_puzzle
     from desktop import Desktop
     from deck import Deck, DEFAULT_MAP_SETTING
-    from terrain import Puzzle, Terrain, Shape, ShapeHelper
+    from terrain import Puzzle, Terrain, ShapeHelper
     from player import Player
     from buildings import BuildingFactory
 
@@ -288,7 +290,9 @@ class Manager:
             puzzle.x = x
             puzzle.y = y
             puzzle.rotation = rotate            
-            for cell in puzzle.cells:   # type: Cell
+            shapes = self.shape_helper.GetShape(puzzle.shape)
+            print(shapes)
+            for cell in shapes:   # type: Cell
                 # 计算旋转后的相对坐标
                 rx, ry = rotate_point(cell[0], cell[1], rotate)
                 # 计算实际坐标
@@ -301,6 +305,9 @@ class Manager:
                 cell.building_id = puzzle.building_id
             # 放置完后 触发效果
             pass
+        else:
+            print("Resource not enough")
+            return False
         return True
 
     def Serialize(self):
@@ -321,12 +328,14 @@ class Manager:
 
 if __name__ == '__main__':
     manager = Manager()
+    manager.setMapSize(4,4)
     manager.StartGame()
     manager.AddPlayer('Player1')
     manager.AddPlayer('Player2')
     manager.AddPlayer('Player3')
     manager.AddPlayer('Player4')
     puzzle = manager.puzzle_deck.Draw()     
+    puzzle = load_puzzle({'puzzle_id': 88, 'terrainType': 8, 'shape': 'Corner', 'building_id': 8})
     print(puzzle.dump())    # {'puzzle_id': 26, 'terrainType': 4, 'shape': 5}
-    manager.Place(manager.players['Player1'], 0, 0, puzzle, rotate=1)
-    print(manager.Serialize())
+    print(manager.Place(manager.players['Player1'], 2, 2, puzzle, rotate=1))
+    print(manager.Desktop.Serialize())

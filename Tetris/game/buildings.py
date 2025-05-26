@@ -1,9 +1,9 @@
 try:
     from Tetris.game.player import PlayerResource, Player
-    from Tetris.game.terrain import Terrain, Shape, Puzzle
+    from Tetris.game.terrain import Terrain, ShapeHelper, Puzzle
 except:
     from player import PlayerResource, Player
-    from terrain import Terrain, Shape, Puzzle
+    from terrain import Terrain, ShapeHelper, Puzzle
 
 import os
 import xml.etree.ElementTree as ET
@@ -31,7 +31,7 @@ class BuildingFactory:
                 building_instance = dict()
                 building_instance['id'] = building_id
                 building_instance['name'] = name
-                building_instance['shape'] = Shape[shape]
+                building_instance['shape'] = ShapeHelper().GetShape(shape)
                 building_instance['tags'] = [tag.strip() for tag in tags if tag.strip()]
 
                 

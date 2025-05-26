@@ -45,22 +45,6 @@ class BuildingTag(Enum):
     Nobility = 4            # 贵族建筑
     Unique = 5              # 唯一建筑
     Special = 6             # 特殊建筑
-    
-class Shape(Enum):
-    I = 1           # 4格
-    J = 2           # 4格
-    L = 3           # 4格
-    O = 4           # 4格
-    S = 5           # 4格
-    T = 6           # 4格
-    Z = 7           # 4格
-    Corner = 10     # 3格转角
-    Two = 11        # 2格
-    Cell = 8        # 1格
-    Rectangle6 = 9  # 6格矩形
-    Rectangle8 = 10 # 8格矩形
-    Line = 11       # 3格直线
-
 
 class ShapeHelper:
     def __init__(self):
@@ -76,7 +60,7 @@ class ShapeHelper:
             for shape_elem in root.findall('Shape'):
                 # 解析基本属性
                 name = shape_elem.find('Name').text
-                shape_type = Shape[name]  # 使用枚举名称获取对应的Shape枚举值
+                shape_type = name  # 使用枚举名称获取对应的Shape枚举值
                 
                 # 解析网格
                 grid = []
@@ -114,7 +98,7 @@ class ShapeHelper:
             print(f"Error reading shape config: {e}")
             raise
     
-    def GetShape(self, shape: Shape):
+    def GetShape(self, shape: str):
         """获取指定形状的相对坐标元组"""
         return self.shapes.get(shape, None)
 
@@ -196,15 +180,15 @@ class Puzzle:
 
     def load(self, data):
         self.puzzle_id = data['puzzle_id']
-        self.x = data['x']
-        self.y = data['y']
+        self.x = data['x'] if 'x' in data else None
+        self.y = data['y'] if 'y' in data else None
         self.terrainType = data['terrainType']
         self.shape = data['shape']
-        self.rotation = data['rotation']
-        self.building_id = data['building_id']
-        self.building_level = data['building_level']
-        self.army = data['army']
-        self.army_owner = data['army_owner']
+        self.rotation = data['rotation'] if 'rotation' in data else None
+        self.building_id = data['building_id'] if 'building_id' in data else None
+        self.building_level = data['building_level'] if 'building_level' in data else None
+        self.army = data['army'] if 'army' in data else None
+        self.army_owner = data['army_owner'] if 'army_owner' in data else None
 
 def load_puzzle(data):
     puzzle = Puzzle()
@@ -215,4 +199,4 @@ def load_puzzle(data):
 if __name__ == '__main__':
     shape_helper = ShapeHelper()
     shape_helper.ReadConfig()
-    print(shape_helper.GetShape(Shape.I))   # ((0, 0), (0, 1), (0, 2), (0, 3))
+    print(shape_helper.GetShape('Corner'))   # ((0, 0), (0, 1), (0, 2), (0, 3))
