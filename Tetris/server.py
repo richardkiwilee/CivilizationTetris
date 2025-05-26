@@ -3,6 +3,7 @@ import traceback
 from concurrent import futures
 import queue
 import random
+from enum import Enum
 import logging
 import json
 from urllib.parse import uses_fragment
@@ -13,17 +14,17 @@ import Tetris.protocol.service_pb2 as pb2
 import Tetris.protocol.service_pb2_grpc as rpc
 from Tetris.game.manager import Manager
 from concurrent.futures import ThreadPoolExecutor
-from Tetris.action import *
+from Tetris.game.action import *
 import threading
 
 
 queues = []
 # 配置日志记录器
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 # 创建控制台处理器
 console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.INFO)
+console_handler.setLevel(logging.DEBUG)
 # 创建格式化器
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 console_handler.setFormatter(formatter)
@@ -37,9 +38,6 @@ class GameStatus(Enum):
 class LobbyServicer(rpc.LobbyServicer):
     def __init__(self):
         self.gm = Manager()
-        logger.info(f'Manager initialized')
-        logger.info(f'Manager Poker Deck Count: {len(self.gm.deck.cards)}')
-        logger.info(f'Manager Consume Deck Count: {len(self.gm.consume.cards)}')
         self.status = GameStatus.LOBBY.value
         self.host = None
         self.users = dict()     # 记录当前大厅的玩家状态
@@ -55,6 +53,7 @@ class LobbyServicer(rpc.LobbyServicer):
         resp = {'type': None, 'msg': ''}
         sender = request.sender
         body = json.loads(request.body)
+        logger.debug(f'Received: {body}')
         action = body.get('action')
         
         # 强制刷新功能
@@ -72,9 +71,11 @@ class LobbyServicer(rpc.LobbyServicer):
                     self.users[username] = dict()
                     self.users[username]['ready'] = False
                     self._broadcast()
+                    logger.debug(f'User {username} logined')
                     return self._response(SystemResponse.OK, resp)
                 else:
                     self._broadcast()
+                    logger.debug(f'User {username} logined')
                     return self._response(SystemResponse.OK, resp)
             
             if action == PlayerAction.Logout.value:
@@ -139,13 +140,13 @@ class LobbyServicer(rpc.LobbyServicer):
         resp['msg'] = 'Unexpect response'
         return self._response(SystemResponse.ERROR, resp)
 
-    def get_current_player(self) -> Any:
+    def get_current_player(self):
         """获取当前回合的玩家"""
         if not self.player_order:
             return None
         return self.player_order[self.current_player_index]
 
-    def next_player(self) -> Any:
+    def next_player(self):
         """移动到下一个玩家"""
         self.current_player_index = (self.current_player_index + 1) % len(self.player_order)
         return self.get_current_player()
@@ -201,8 +202,13 @@ class LobbyServicer(rpc.LobbyServicer):
                     del self.users[request.sender]['stream']
 
     def _response(self, status, body):
-        return pb2.GeneralResponse(self.seq, msgtype='response', status=status.value, sender='__SERVER__', 
-        body=json.dumps(body))
+        return pb2.GeneralResponse(
+            sequence=self.seq,
+            msgtype=1,  # 1 for response
+            status=status.value,
+            sender='__SERVER__',
+            body=json.dumps(body)
+        )
 
     def Broadcast(self, info):
         return pb2.Broadcast(sequence=self.seq, msgtype=200, 
@@ -259,7 +265,7 @@ def server(port=50051):
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=8))
     rpc.add_LobbyServicer_to_server(LobbyServicer(), server)
     server.add_insecure_port(f'[::]:{port}')
-    logger.info('Server started')
+    logger.info(f'Server started, listening on port: {port}')
     server.start()
     try:
         while True:

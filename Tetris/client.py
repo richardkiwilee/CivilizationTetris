@@ -2,21 +2,37 @@ import time
 import grpc
 import threading
 import traceback
-import queue
 import sys
-import random
-import string
-import argparse
 import json
-import os
+import pygame
+import argparse
+from Tetris.game.action import PlayerAction, SystemResponse
 import Tetris.protocol.service_pb2 as pb2
 import Tetris.protocol.service_pb2_grpc as rpc
-from Tetris.game.manager import Manager
-from Tetris.game.ui import RefreshScreen
-import ctypes
-# 定义GetAsyncKeyState函数
-def getasynckeystate(key):
-    return ctypes.windll.user32.GetAsyncKeyState(key)
+from enum import Enum
+
+# Initialize Pygame
+pygame.init()
+pygame.font.init()
+
+# Game Constants
+BLOCK_SIZE = 30
+FILL_BLOCK = 7
+BLOCK_COUNT = 4
+GRID_WIDTH = BLOCK_COUNT * FILL_BLOCK
+GRID_HEIGHT = BLOCK_COUNT * FILL_BLOCK
+TOOLBAR_HEIGHT = 100
+TOP_MARGIN = 50
+
+# Screen dimensions
+SCREEN_WIDTH = BLOCK_SIZE * GRID_WIDTH
+SCREEN_HEIGHT = TOP_MARGIN + BLOCK_SIZE * GRID_HEIGHT + TOOLBAR_HEIGHT
+
+# Colors
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+CREAM = (255, 253, 245)
+RED = (255, 0, 0)
 
 
 class Client:
@@ -25,126 +41,153 @@ class Client:
         # 创建 gRPC 通道和存根
         channel = grpc.insecure_channel(address + ':' + str(port))
         self.stub = rpc.LobbyStub(channel)
-        # 启动一个新线程监听消息
-        self.running = True  # 添加运行状态标志
-        retry = 0
-        self.detail = False
-        loginResp = self.sendMessage(LobbyAction.LOGIN.value, self.username, None, None, None, None)
-        if loginResp.status != 200:
+        
+        # Initialize Pygame window
+        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+        pygame.display.set_caption(f'Civilization Tetris - {username}')
+        self.clock = pygame.time.Clock()
+        self.font = pygame.font.SysFont('simhei', 24)
+        
+        # Game state
+        self.running = True
+        self.game_state = None
+        self.game_state_lock = threading.Lock()
+        self.state_callback = None  # Callback for game state updates
+        
+        # Login to server
+        loginResp = self.sendMessage(PlayerAction.Login.value, self.username, None, None, None, None)
+        print(loginResp)
+        if loginResp.status != SystemResponse.OK.value:
             print('Failed to login lobby: {}'.format(loginResp.msg))
             return
+            
+        # Start message listening thread
         self.listening_thread = threading.Thread(target=self.__listen_for_messages, daemon=True)
         self.listening_thread.start()
-        # 初始化lobby
-        self.sendMessage(LobbyAction.SYNC.value, self.username, None, None, None, None)
-        self.input_thread = threading.Thread(target=self.add_input, daemon=True)
-        self.input_thread.start()
+        
+        # Initialize lobby
+        self.sendMessage(PlayerAction.Sync.value, self.username, None, None, None, None)
 
-    def add_input(self):
-        # 从控制台获取输入并发送到服务器
+    def set_state_callback(self, callback):
+        """Set callback function for game state updates"""
+        self.state_callback = callback
+
+    def update_game_state(self, new_state):
+        """Update game state and trigger callback if set"""
+        with self.game_state_lock:
+            self.game_state = new_state
+            if self.state_callback:
+                self.state_callback(new_state)
+
+    def draw(self):
+        """Draw the game state"""
+        self.screen.fill(CREAM)
+        
+        # Draw game grid
+        if self.game_state:
+            with self.game_state_lock:
+                for y, row in enumerate(self.game_state):
+                    for x, cell in enumerate(row):
+                        rect = pygame.Rect(
+                            x * BLOCK_SIZE,
+                            TOP_MARGIN + y * BLOCK_SIZE,
+                            BLOCK_SIZE - 1,
+                            BLOCK_SIZE - 1
+                        )
+                        if cell and cell.get('owner'):
+                            pygame.draw.rect(self.screen, WHITE, rect)
+                            # Draw cell info (you can expand this based on cell data)
+                            if cell.get('building_id'):
+                                text = self.font.render(str(cell['building_id']), True, BLACK)
+                                text_rect = text.get_rect(center=rect.center)
+                                self.screen.blit(text, text_rect)
+        
+        pygame.display.flip()
+
+    def run(self):
+        """Main game loop"""
         while self.running:
-            try:
-                # 等待用户输入
-                command = input('> ')
-                if not command:
-                    continue
-                # 解析命令和参数
-                parts = command.strip().split()
-                action = parts[0]
-                arg1 = parts[1] if len(parts) > 1 else None
-                arg2 = parts[2] if len(parts) > 2 else None
-                arg3 = parts[3] if len(parts) > 3 else None
-                arg4 = parts[4] if len(parts) > 4 else None
-                arg5 = parts[5] if len(parts) > 5 else None                
-                print('Command received:', action)
-                if action == 'exit':
-                    print('Exiting game...')
-                    self.sendMessage(LobbyAction.LOGOUT.value, self.username, arg2, arg3, arg4, arg5)
-                    self.running = False  # 设置运行状态为False
-                    os._exit(0)  # 强制结束所有线程
-                    break
-                if action in ['debug', 'd']:
-                    print(self.table_info)
-                    continue
-                if action in ['sync', 's']:
-                    self.sendMessage(LobbyAction.SYNC.value, self.username, arg2, arg3, arg4, arg5)
-                if action == 'detail':
-                    self.detail = not self.detail
-                # 根据游戏状态处理不同的命令
-                if self.table_info.get('game_status') == GameStatus.SCORE.value:
-                    self.sendMessage(LobbyAction.READY.value, self.username, arg2, arg3, arg4, arg5)                    
-                if self.table_info.get('game_status') == GameStatus.LOBBY.value:
-                    if action == LobbyAction.READY.value or action == LobbyAction.READY.value[0]:
-                        self.sendMessage(LobbyAction.READY.value, self.username, arg2, arg3, arg4, arg5)
-                    if action == LobbyAction.CANCEL.value or action == LobbyAction.CANCEL.value[0]:
-                        self.sendMessage(LobbyAction.CANCEL.value, self.username, arg2, arg3, arg4, arg5)
-                    if action == LobbyAction.START_GAME.value or action == LobbyAction.START_GAME.value[0]:
-                        self.sendMessage(LobbyAction.START_GAME.value, self.username, arg2, arg3, arg4, arg5)
-                if self.table_info.get('game_status') == GameStatus.GAME.value:
-                    if action in ['skill', 'card']:
-                        self.sendMessage(action, arg1, arg2, arg3, arg4, arg5)
-                    elif action == 's':
-                        self.sendMessage('skill', arg1, arg2, arg3, arg4, arg5)
-                    elif action == 'c':
-                        self.sendMessage('card', arg1, arg2, arg3, arg4, arg5)
-                    elif action == 'p':
-                        self.sendMessage('pass', arg1, arg2, arg3, arg4, arg5)
-                    else:
-                        print('In game, available commands: skill, card, exit')
-                if self.table_info.get('game_status') == GameStatus.WAIT_PLAY.value:
-                    try:
-                        parts = command.strip().split()            
-                        arg1 = self.CheckArg(parts[0] if len(parts) > 0 else None)
-                        arg2 = self.CheckArg(parts[1] if len(parts) > 1 else None)
-                        arg3 = self.CheckArg(parts[2] if len(parts) > 2 else None)
-                        arg4 = self.CheckArg(parts[3] if len(parts) > 3 else None)
-                        arg5 = self.CheckArg(parts[4] if len(parts) > 4 else None)
-                        self.sendMessage(TurnAction.PLAY_CARD.value, arg1, arg2, arg3, arg4, arg5)
-                    except Exception as ex:
-                        print(ex)
-            except KeyboardInterrupt:
-                print('\nReceived keyboard interrupt, exiting...')
-                self.sendMessage(LobbyAction.LOGOUT.value, self.username)
-                self.running = False  # 设置运行状态为False
-                os._exit(0)  # 强制结束所有线程
-                break
-            except Exception as ex:
-                print('Error processing command:', str(ex))
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.handle_quit()
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        self.handle_quit()
+
+            self.draw()
+            self.clock.tick(60)
+
 
     def __listen_for_messages(self):
-        # 从服务器接收新消息并显示
+        """Listen for messages from the server and update game state"""
         try:
-            subscribeResps = self.stub.Subscribe(pb2.GeneralRequest(sender=self.username, body=json.dumps(dict())))
-            subscribeResp = next(subscribeResps)
-            if subscribeResp is None:
-                print('Failed to subscribe game.')
-                self.running = False
-                os._exit(1)
-                return
-            print('Successfully joined the game.')
-            for resp in subscribeResps:
-                if not self.running:  # 检查运行状态
-                    break
-                self.table_info = json.loads(resp.body)
-                RefreshScreen(self.username, self.table_info, self.detail)
-        except grpc.RpcError as rpc_error:
-            print('Stream interrupted: RPC Error -', rpc_error.code())
+            while self.running:
+                response = self.stub.Subscribe(pb2.GeneralRequest(
+                    sender=self.username,
+                    body=json.dumps({})
+                ))
+                for message in response:
+                    try:
+                        data = json.loads(message.body)
+                        if isinstance(data, list):  # Game state update
+                            self.update_game_state(data)
+                        else:
+                            print(f'Message from {message.sender}: {data}')
+                    except json.JSONDecodeError:
+                        print('Error decoding message:', message.body)
+                    except Exception as e:
+                        print('Error processing message:', str(e))
+        except Exception as e:
+            print('Error in message listener:', str(e))
             traceback.print_exc()
-            self.running = False
-            os._exit(1)
-        except Exception as ex:
-            print('Stream interrupted:', str(ex))
-            traceback.print_exc()
-            self.running = False
-            os._exit(1)
+        finally:
+            print('Message listener stopped')
+
+    def handle_quit(self):
+        """Handle quit event"""
+        self.running = False
+        self.sendMessage(PlayerAction.Logout.value, self.username)
+        pygame.quit()
+        sys.exit()
 
     def sendMessage(self, action, arg1=None, arg2=None, arg3=None, arg4=None, arg5=None):
-        msg = {
-            'action': action, 'arg1': arg1, 'arg2': arg2, 'arg3': arg3, 'arg4': arg4, 'arg5': arg5
-        }
-        resp = self.stub.Handle(pb2.GeneralRequest(sender=self.username, body=json.dumps(msg)))
-        print('Server response: ', resp)
-        return resp
+        """Send message to server"""
+        try:
+            msg = {
+                'action': action,
+                'arg1': arg1,
+                'arg2': arg2,
+                'arg3': arg3,
+                'arg4': arg4,
+                'arg5': arg5
+            }
+            response = self.stub.Handle(pb2.GeneralRequest(
+                sender=self.username,
+                body=json.dumps(msg)
+            ))
+            return response
+        except Exception as e:
+            print(f'Error sending message: {e}')
+            return None
+
+def main():
+    parser = argparse.ArgumentParser(description='Civilization Tetris Client')
+    parser.add_argument('--address', default='localhost', help='Server address')
+    parser.add_argument('--port', type=int, default=50051, help='Server port')
+    parser.add_argument('--username', default=None, help='Username for the game')
+    
+    args = parser.parse_args()
+    
+    # Generate random username if not provided
+    if not args.username:
+        args.username = f'Player_{int(time.time()) % 1000}'
+    
+    client = Client(args.username, args.address, args.port)
+    client.run()
+
+if __name__ == '__main__':
+    main()
+
 
 
 def main(address='localhost', port=50051, username=None):

@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-import HyperTexas.protocol.service_pb2 as service__pb2
+import Tetris.protocol.service_pb2 as service__pb2
 
 
 class LobbyStub(object):
