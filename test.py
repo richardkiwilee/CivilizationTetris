@@ -4,6 +4,9 @@ import time
 from enum import Enum
 from typing import Optional, Dict, Any
 
+# 初始化pygame字体系统
+pygame.font.init()
+
 # Initialize Pygame
 pygame.init()
 
@@ -114,9 +117,10 @@ class Tetris:
         self.hover_start_time = 0
         self.hover_piece: Optional[Dict[str, Any]] = None
         self.show_tooltip = False
-        self.tooltip_font = pygame.font.Font(None, 24)
+        # 使用系统默认字体以支持中文
+        self.tooltip_font = pygame.font.SysFont('simhei', 24)  # 使用黑体
         # Button related attributes
-        self.button_font = pygame.font.Font(None, 24)
+        self.button_font = pygame.font.SysFont('simhei', 24)  # 使用相同的中文字体
         button_x = BLOCK_SIZE * GRID_WIDTH + (PLAYER_SLOT_WIDTH - BUTTON_WIDTH) // 2  # 放在玩家槽下方中央
         self.buttons = [
             {'text': 'End Turn', 'rect': pygame.Rect(button_x, SCREEN_HEIGHT - TOOLBAR_HEIGHT + 20, BUTTON_WIDTH, BUTTON_HEIGHT)},
@@ -387,7 +391,8 @@ class Tetris:
 
         # Draw tooltip if needed
         if self.show_tooltip and self.hover_piece:
-            self.draw_tooltip()
+            # self.draw_tooltip()   # 这里不需要对普通的地形有提示
+            pass
 
         pygame.display.flip()
 
@@ -404,7 +409,7 @@ class Tetris:
             Terrain.SWAMP: "沼泽"
         }
         description = descriptions.get(terrain, terrain.name)
-        text = f"地形: {description}"
+        text = f"地形: {description}"  # 确保使用中文字体
         text_surface = self.tooltip_font.render(text, True, (0, 0, 0))
         text_rect = text_surface.get_rect()
         
