@@ -100,7 +100,11 @@ class ShapeHelper:
     
     def GetShape(self, shape: str):
         """获取指定形状的相对坐标元组"""
-        return self.shapes.get(shape, None)
+        _ = self.shapes.get(shape, None)
+        if _ is not None:   
+            return _
+        print(f'GetShape {shape} not found: {shape}')
+        return None
 
 
 class Forces(Enum):

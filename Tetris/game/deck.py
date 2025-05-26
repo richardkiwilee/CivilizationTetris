@@ -47,7 +47,7 @@ class Deck:
                     puzzle.y = None
                     puzzle.rotation = None
                     puzzle.terrainType = Terrain.Building.value
-                    puzzle.shape = ShapeHelper().GetShape(shape_name)
+                    puzzle.shape = shape_name
                     puzzle.building_id = building_id
                     puzzle.building_level = 0
                     puzzle.army = 0
@@ -65,7 +65,7 @@ class Deck:
                 puzzle.y = None
                 puzzle.rotation = None
                 puzzle.terrainType = terrain
-                puzzle.shape = shape
+                puzzle.shape = _shape
                 puzzle.building_id = None
                 puzzle.building_level = None
                 puzzle.army = None

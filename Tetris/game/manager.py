@@ -105,6 +105,8 @@ class Manager:
                     return False
                 # 检查该位置是否已被占用 建筑可以在己方相同的地形上加盖
                 cell = self.Desktop.GetCell(ax, ay)
+                if cell is None:
+                    return False
                 if cell is not None:
                     if cell.owner != player.name:
                         return False
@@ -291,7 +293,8 @@ class Manager:
             puzzle.y = y
             puzzle.rotation = rotate            
             shapes = self.shape_helper.GetShape(puzzle.shape)
-            print(shapes)
+            if shapes is None:
+                print(f"Shape is None. shape: {puzzle.shape}")
             for cell in shapes:   # type: Cell
                 # 计算旋转后的相对坐标
                 rx, ry = rotate_point(cell[0], cell[1], rotate)
@@ -335,7 +338,5 @@ if __name__ == '__main__':
     manager.AddPlayer('Player3')
     manager.AddPlayer('Player4')
     puzzle = manager.puzzle_deck.Draw()     
-    puzzle = load_puzzle({'puzzle_id': 88, 'terrainType': 8, 'shape': 'Corner', 'building_id': 8})
-    print(puzzle.dump())    # {'puzzle_id': 26, 'terrainType': 4, 'shape': 5}
     print(manager.Place(manager.players['Player1'], 2, 2, puzzle, rotate=1))
     print(manager.Desktop.Serialize())
