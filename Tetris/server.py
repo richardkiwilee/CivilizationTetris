@@ -84,6 +84,7 @@ class LobbyServicer(rpc.LobbyServicer):
                     self.users.pop(username)
                     self._broadcast()
                 resp['msg'] = f'{username} Logout'
+                logger.debug(f'User {username} logout')
                 return self._response(SystemResponse.OK, resp)    
             
             if action == PlayerAction.StartGame.value:
@@ -253,29 +254,73 @@ class LobbyServicer(rpc.LobbyServicer):
 
     def _onDisconnectWrapper(self, request, context):
         def callback():
-            curUser = request.name
-            self._broadcast()
-            del curUser['stream']
-            self.gm.player_exit(curUser['name'])
+            try:
+                username = request.name
+                if username in self.users:
+                    user_data = self.users[username]
+                    if 'stream' in user_data:
+                        user_data['stream'].put(None)
+                    self.users.pop(username)
+                    self.gm.player_exit(username)
+                    self._broadcast()
+                    logger.debug(f'User {username} disconnected')
+            except Exception as e:
+                logger.error(f'Error in disconnect callback: {e}')
         return callback
 
 
 def server(port=50051):
     logger.info('Starting server')
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=8))
-    rpc.add_LobbyServicer_to_server(LobbyServicer(), server)
+    servicer = LobbyServicer()
+    rpc.add_LobbyServicer_to_server(servicer, server)
     server.add_insecure_port(f'[::]:{port}')
     logger.info(f'Server started, listening on port: {port}')
     server.start()
+
+    def cleanup():
+        logger.info('Cleaning up server...')
+        try:
+            # First stop accepting new connections
+            server.stop(0)
+            
+            # Close all existing client connections
+            for username, user_data in list(servicer.users.items()):
+                try:
+                    if 'stream' in user_data:
+                        user_data['stream'].put(None)
+                    servicer.users.pop(username)
+                except Exception as e:
+                    logger.error(f'Error closing connection for {username}: {e}')
+            
+            # Clear all message queues
+            for q in queues:
+                try:
+                    while not q.empty():
+                        q.get_nowait()
+                    q.put(None)
+                except Exception as e:
+                    logger.error(f'Error clearing queue: {e}')
+            
+            # Wait for all RPCs to complete
+            server.wait_for_termination(timeout=2)
+            
+            logger.info('Server shutdown complete')
+        except Exception as e:
+            logger.error(f'Error during cleanup: {e}')
+            raise
+
     try:
         while True:
             time.sleep(1)
     except KeyboardInterrupt:
-        logger.info('Exiting')
-        # to unblock all queues
-        for q in queues:
-            q.put(None)
-        server.stop(0)
+        logger.info('Received shutdown signal')
+        cleanup()
+        exit()
+    except Exception as e:
+        logger.error(f'Server error: {e}')
+        cleanup()
+        exit()
 
 
 if __name__ == '__main__':
