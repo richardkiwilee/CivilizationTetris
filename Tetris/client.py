@@ -17,22 +17,43 @@ pygame.font.init()
 
 # Game Constants
 BLOCK_SIZE = 30
-FILL_BLOCK = 7
-BLOCK_COUNT = 4
+FILL_BLOCK = 7  # 定义 FILL_BLOCK * FILL_BLOCK是一个正方形的小分组
+BLOCK_COUNT = 4  # 定义每行和每列有多少个 FILL_BLOCK
 GRID_WIDTH = BLOCK_COUNT * FILL_BLOCK
 GRID_HEIGHT = BLOCK_COUNT * FILL_BLOCK
-TOOLBAR_HEIGHT = 100
-TOP_MARGIN = 50
+TOOLBAR_HEIGHT = 100  # Height of the bottom toolbar
+TOP_MARGIN = 50  # Height of top margin
+
+# UI Constants
+PLAYER_SLOTS = 4  # Number of player slots
+PLAYER_SLOT_HEIGHT = 180  # Height of each player slot
+PLAYER_SLOT_WIDTH = 200  # Width of player slots area
+RESOURCE_ICON_SIZE = 20  # Size of resource icons
+EFFECT_SLOT_SIZE = 40  # Size of special effect slots
+BUTTON_HEIGHT = 40
+BUTTON_WIDTH = 120
+BUTTON_MARGIN = 10
+
+# Resource layout
+RESOURCE_TYPES = [
+    ('food', 'Asset/Icons/ResourcesIcons/icon_food.png'),
+    ('wood', 'Asset/Icons/ResourcesIcons/icon_wood.png'),
+    ('stone', 'Asset/Icons/ResourcesIcons/icon_stone.png'),
+    ('gold', 'Asset/Icons/ResourcesIcons/icon_gold.png'),
+    ('faith', 'Asset/Icons/ResourcesIcons/icon_faith.png'),
+    ('citizen', 'Asset/Icons/ResourcesIcons/icon_citizen.png'),
+    ('order', 'Asset/Icons/ResourcesIcons/icon_decree.png')
+]
 
 # Screen dimensions
-SCREEN_WIDTH = BLOCK_SIZE * GRID_WIDTH
+SCREEN_WIDTH = BLOCK_SIZE * GRID_WIDTH + PLAYER_SLOT_WIDTH  # Main grid + player slots
 SCREEN_HEIGHT = TOP_MARGIN + BLOCK_SIZE * GRID_HEIGHT + TOOLBAR_HEIGHT
 
 # Colors
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
-CREAM = (255, 253, 245)
-RED = (255, 0, 0)
+WHITE = (255, 255, 255)  # 玩家信息栏背景
+BLACK = (0, 0, 0)    # 文字颜色
+CREAM = (255, 253, 245)  # 游戏区域背景色
+RED = (255, 0, 0)    # 无效放置提示
 
 
 class Client:
@@ -48,11 +69,22 @@ class Client:
         self.clock = pygame.time.Clock()
         self.font = pygame.font.SysFont('simhei', 24)
         
+        # Load resources
+        self.resource_images = self.load_resource_images()
+        
         # Game state
         self.running = True
         self.game_state = None
         self.game_state_lock = threading.Lock()
         self.state_callback = None  # Callback for game state updates
+        self.players = {}
+        
+        # Button setup
+        button_x = BLOCK_SIZE * GRID_WIDTH + (PLAYER_SLOT_WIDTH - BUTTON_WIDTH) // 2
+        self.buttons = [
+            {'text': 'Ready', 'rect': pygame.Rect(button_x, SCREEN_HEIGHT - TOOLBAR_HEIGHT + 20, BUTTON_WIDTH, BUTTON_HEIGHT)},
+            {'text': 'Cancel', 'rect': pygame.Rect(button_x, SCREEN_HEIGHT - TOOLBAR_HEIGHT + 70, BUTTON_WIDTH, BUTTON_HEIGHT)}
+        ]
         
         # Login to server
         loginResp = self.sendMessage(PlayerAction.Login.value, self.username, None, None, None, None)
@@ -79,30 +111,105 @@ class Client:
             if self.state_callback:
                 self.state_callback(new_state)
 
+    def load_resource_images(self):
+        """Load and scale resource icons"""
+        images = {}
+        for resource_name, image_path in RESOURCE_TYPES:
+            try:
+                img = pygame.image.load(image_path)
+                img = pygame.transform.scale(img, (RESOURCE_ICON_SIZE, RESOURCE_ICON_SIZE))
+                images[resource_name] = img
+            except pygame.error as e:
+                print(f'Warning: Could not load image for {resource_name}: {e}')
+                images[resource_name] = None
+        return images
+
+    def draw_player_slot(self, slot_index, player_data=None):
+        """Draw a player slot with their information"""
+        x = BLOCK_SIZE * GRID_WIDTH
+        y = TOP_MARGIN + slot_index * PLAYER_SLOT_HEIGHT
+        
+        # Draw slot background
+        slot_rect = pygame.Rect(x, y, PLAYER_SLOT_WIDTH, PLAYER_SLOT_HEIGHT)
+        pygame.draw.rect(self.screen, WHITE, slot_rect)
+        pygame.draw.rect(self.screen, BLACK, slot_rect, 1)
+        
+        if player_data:
+            # Draw player name
+            name_text = self.font.render(player_data.get('name', 'Unknown'), True, BLACK)
+            self.screen.blit(name_text, (x + 10, y + 10))
+            
+            # Draw resources if available
+            resources = player_data.get('resources', {})
+            for i, (resource_name, _) in enumerate(RESOURCE_TYPES):
+                resource_x = x + 10 + (i % 4) * (RESOURCE_ICON_SIZE + 5)
+                resource_y = y + 40 + (i // 4) * (RESOURCE_ICON_SIZE + 5)
+                
+                # Draw resource icon
+                if self.resource_images.get(resource_name):
+                    self.screen.blit(self.resource_images[resource_name], (resource_x, resource_y))
+                
+                # Draw resource value
+                value = resources.get(resource_name, 0)
+                value_text = self.font.render(str(value), True, BLACK)
+                self.screen.blit(value_text, (resource_x + RESOURCE_ICON_SIZE + 5, resource_y))
+
     def draw(self):
         """Draw the game state"""
         self.screen.fill(CREAM)
         
         # Draw game grid
+        for y in range(GRID_HEIGHT):
+            for x in range(GRID_WIDTH):
+                rect = pygame.Rect(
+                    x * BLOCK_SIZE,
+                    TOP_MARGIN + y * BLOCK_SIZE,
+                    BLOCK_SIZE - 1,
+                    BLOCK_SIZE - 1
+                )
+                pygame.draw.rect(self.screen, BLACK, rect, 1)
+        
+        # Draw game state if available
         if self.game_state:
             with self.game_state_lock:
                 for y, row in enumerate(self.game_state):
                     for x, cell in enumerate(row):
-                        rect = pygame.Rect(
-                            x * BLOCK_SIZE,
-                            TOP_MARGIN + y * BLOCK_SIZE,
-                            BLOCK_SIZE - 1,
-                            BLOCK_SIZE - 1
-                        )
                         if cell and cell.get('owner'):
+                            rect = pygame.Rect(
+                                x * BLOCK_SIZE,
+                                TOP_MARGIN + y * BLOCK_SIZE,
+                                BLOCK_SIZE - 1,
+                                BLOCK_SIZE - 1
+                            )
                             pygame.draw.rect(self.screen, WHITE, rect)
-                            # Draw cell info (you can expand this based on cell data)
                             if cell.get('building_id'):
                                 text = self.font.render(str(cell['building_id']), True, BLACK)
                                 text_rect = text.get_rect(center=rect.center)
                                 self.screen.blit(text, text_rect)
         
+        # Draw player slots
+        for i in range(PLAYER_SLOTS):
+            self.draw_player_slot(i, self.players.get(i))
+        
+        # Draw buttons
+        for button in self.buttons:
+            pygame.draw.rect(self.screen, WHITE, button['rect'])
+            pygame.draw.rect(self.screen, BLACK, button['rect'], 1)
+            text = self.font.render(button['text'], True, BLACK)
+            text_rect = text.get_rect(center=button['rect'].center)
+            self.screen.blit(text, text_rect)
+        
         pygame.display.flip()
+
+    def handle_button_click(self, pos):
+        """Handle button clicks"""
+        for button in self.buttons:
+            if button['rect'].collidepoint(pos):
+                if button['text'] == 'Ready':
+                    self.sendMessage(PlayerAction.Ready.value, self.username)
+                elif button['text'] == 'Cancel':
+                    self.sendMessage(PlayerAction.Cancel.value, self.username)
+                break
 
     def run(self):
         """Main game loop"""
@@ -113,6 +220,9 @@ class Client:
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         self.handle_quit()
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    if event.button == 1:  # Left click
+                        self.handle_button_click(event.pos)
 
             self.draw()
             self.clock.tick(60)
@@ -129,10 +239,11 @@ class Client:
                 for message in response:
                     try:
                         data = json.loads(message.body)
-                        if isinstance(data, list):  # Game state update
-                            self.update_game_state(data)
-                        else:
-                            print(f'Message from {message.sender}: {data}')
+                        if isinstance(data, dict):
+                            if 'users' in data:  # Player list update
+                                self.update_players(data['users'])
+                            if 'game_state' in data:  # Game state update
+                                self.update_game_state(data['game_state'])
                     except json.JSONDecodeError:
                         print('Error decoding message:', message.body)
                     except Exception as e:
@@ -142,6 +253,17 @@ class Client:
             traceback.print_exc()
         finally:
             print('Message listener stopped')
+
+    def update_players(self, users_data):
+        """Update player slots with user data"""
+        self.players.clear()
+        for i, (username, data) in enumerate(users_data.items()):
+            if i < PLAYER_SLOTS:
+                self.players[i] = {
+                    'name': username,
+                    'resources': data.get('resources', {}),
+                    'ready': data.get('ready', False)
+                }
 
     def handle_quit(self):
         """Handle quit event"""
