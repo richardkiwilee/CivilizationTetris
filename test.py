@@ -60,19 +60,32 @@ FILL_BLOCK = 7 # 定义 FILL_BLOCK * FILL_BLOCK是一个正方形的小分组
 BLOCK_COUNT = 4 # 定义每行和每列有多少个 FILL_BLOCK
 GRID_WIDTH = BLOCK_COUNT * FILL_BLOCK
 GRID_HEIGHT = BLOCK_COUNT * FILL_BLOCK
-PLAYER_BAR_HEIGHT = 50  # Height of the player score bar
 TOOLBAR_HEIGHT = 100  # Height of the bottom toolbar
+TOP_MARGIN = 50  # Height of top margin
 # UI Constants
 PLAYER_SLOTS = 4  # Number of player slots
-PLAYER_SLOT_HEIGHT = 100  # Height of each player slot
+PLAYER_SLOT_HEIGHT = 180  # Height of each player slot (increased to accommodate resources and effects)
 PLAYER_SLOT_WIDTH = 200  # Width of player slots area
+RESOURCE_ICON_SIZE = 20  # Size of resource icons
+EFFECT_SLOT_SIZE = 40  # Size of special effect slots
 BUTTON_HEIGHT = 40
 BUTTON_WIDTH = 120
 BUTTON_MARGIN = 10
 
+# Resource layout
+RESOURCE_TYPES = [
+    ('food', 'Asset/Icons/ResourcesIcons/icon_food.png'),
+    ('wood', 'Asset/Icons/ResourcesIcons/icon_wood.png'),
+    ('stone', 'Asset/Icons/ResourcesIcons/icon_stone.png'),
+    ('gold', 'Asset/Icons/ResourcesIcons/icon_gold.png'),
+    ('faith', 'Asset/Icons/ResourcesIcons/icon_faith.png'),
+    ('citizen', 'Asset/Icons/ResourcesIcons/icon_citizen.png'),
+    ('order', 'Asset/Icons/ResourcesIcons/icon_decree.png')
+]
+
 # Screen dimensions
 SCREEN_WIDTH = BLOCK_SIZE * GRID_WIDTH + PLAYER_SLOT_WIDTH  # Main grid + player slots
-SCREEN_HEIGHT = PLAYER_BAR_HEIGHT + BLOCK_SIZE * GRID_HEIGHT + TOOLBAR_HEIGHT
+SCREEN_HEIGHT = TOP_MARGIN + BLOCK_SIZE * GRID_HEIGHT + TOOLBAR_HEIGHT
 
 # Tetromino shapes
 SHAPES = [
@@ -93,6 +106,7 @@ class Tetris:
         pygame.display.set_caption('Tetris')
         self.clock = pygame.time.Clock()
         self.terrain_images = load_terrain_images()
+        self.resource_images = self.load_resource_images()
         self.toolbar_pieces = self.generate_toolbar_pieces()
         self.selected_piece = None
         self.mouse_pos = (0, 0)
@@ -110,14 +124,69 @@ class Tetris:
         ]
         self.reset_game()
 
+    def load_resource_images(self):
+        images = {}
+        for resource_name, resource_path in RESOURCE_TYPES:
+            try:
+                img = pygame.image.load(resource_path)
+                img = pygame.transform.scale(img, (RESOURCE_ICON_SIZE, RESOURCE_ICON_SIZE))
+                images[resource_name] = img
+            except pygame.error as e:
+                print(f'Warning: Could not load image for {resource_name}: {e}')
+                images[resource_name] = None
+        return images
+
+    def draw_player_slot(self, slot_index, player_name='Player 1', resources=None):
+        if resources is None:
+            resources = {'food': 0, 'wood': 0, 'stone': 0, 'gold': 0, 'faith': 0, 'citizen': 0, 'order': 0}
+
+        x = BLOCK_SIZE * GRID_WIDTH
+        y = TOP_MARGIN + slot_index * PLAYER_SLOT_HEIGHT
+        slot_rect = pygame.Rect(x, y, PLAYER_SLOT_WIDTH, PLAYER_SLOT_HEIGHT)
+        
+        # Draw slot background
+        pygame.draw.rect(self.screen, WHITE, slot_rect)
+        pygame.draw.rect(self.screen, BLACK, slot_rect, 1)
+
+        # Draw player name
+        name_font = pygame.font.Font(None, 24)
+        name_text = name_font.render(player_name, True, BLACK)
+        self.screen.blit(name_text, (x + 5, y + 5))
+
+        # Draw resources
+        resource_font = pygame.font.Font(None, 20)
+        left_resources = ['food', 'wood', 'stone']
+        right_resources = ['gold', 'faith', 'citizen', 'order']
+        
+        # Left column resources
+        for i, resource in enumerate(left_resources):
+            icon_y = y + 30 + i * (RESOURCE_ICON_SIZE + 5)
+            if self.resource_images.get(resource):
+                self.screen.blit(self.resource_images[resource], (x + 5, icon_y))
+            value_text = resource_font.render(str(resources[resource]), True, BLACK)
+            self.screen.blit(value_text, (x + RESOURCE_ICON_SIZE + 10, icon_y + 2))
+
+        # Right column resources
+        for i, resource in enumerate(right_resources):
+            icon_y = y + 30 + i * (RESOURCE_ICON_SIZE + 5)
+            if self.resource_images.get(resource):
+                self.screen.blit(self.resource_images[resource], (x + PLAYER_SLOT_WIDTH//2, icon_y))
+            value_text = resource_font.render(str(resources[resource]), True, BLACK)
+            self.screen.blit(value_text, (x + PLAYER_SLOT_WIDTH//2 + RESOURCE_ICON_SIZE + 5, icon_y + 2))
+
+        # Draw special effects slots
+        effects_y = y + PLAYER_SLOT_HEIGHT - EFFECT_SLOT_SIZE - 5
+        for i in range(4):
+            effect_x = x + 5 + i * (EFFECT_SLOT_SIZE + 5)
+            effect_rect = pygame.Rect(effect_x, effects_y, EFFECT_SLOT_SIZE, EFFECT_SLOT_SIZE)
+            pygame.draw.rect(self.screen, WHITE, effect_rect)
+            pygame.draw.rect(self.screen, BLACK, effect_rect, 1)
+
     def reset_game(self):
         self.grid = [[{'terrain': None} for _ in range(GRID_WIDTH)] for _ in range(GRID_HEIGHT)]
         self.current_piece = None
         self.preview_piece = None
         self.game_over = False
-        self.score = 0
-        self.level = 1
-        self.lines_cleared = 0
         self.toolbar_pieces = self.generate_toolbar_pieces()
         self.selected_piece = None
 
@@ -138,19 +207,19 @@ class Tetris:
         # Convert mouse position to grid position
         x, y = mouse_pos
         grid_x = (x // BLOCK_SIZE)
-        grid_y = ((y - PLAYER_BAR_HEIGHT) // BLOCK_SIZE)
+        grid_y = ((y - TOP_MARGIN) // BLOCK_SIZE)
         return grid_x, grid_y
 
     def is_mouse_in_grid(self, mouse_pos):
         # Check if mouse is in the game grid area
         x, y = mouse_pos
         return (0 <= x < GRID_WIDTH * BLOCK_SIZE and
-                PLAYER_BAR_HEIGHT <= y < PLAYER_BAR_HEIGHT + GRID_HEIGHT * BLOCK_SIZE)
+                TOP_MARGIN <= y < TOP_MARGIN + GRID_HEIGHT * BLOCK_SIZE)
 
     def is_mouse_in_toolbar(self, mouse_pos):
         # Check if mouse is in the toolbar area (only left side where pieces are)
         x, y = mouse_pos
-        toolbar_y = PLAYER_BAR_HEIGHT + GRID_HEIGHT * BLOCK_SIZE
+        toolbar_y = TOP_MARGIN + GRID_HEIGHT * BLOCK_SIZE
         return (0 <= x < BLOCK_SIZE * GRID_WIDTH and
                 toolbar_y <= y < toolbar_y + TOOLBAR_HEIGHT)
 
@@ -184,9 +253,6 @@ class Tetris:
         new_shape = list(zip(*piece['shape'][::-1]))
         piece['shape'] = new_shape
 
-    def update_score(self):
-        # Just increment score when piece is placed
-        self.score += 10
 
     def lock_piece(self):
         if not self.check_valid_placement(self.preview_piece) or self.check_overlap(self.preview_piece):
@@ -200,7 +266,6 @@ class Tetris:
                             'terrain': self.preview_piece['terrain']
                         }
         
-        self.update_score()
         self.preview_piece = self.new_piece()
         if not self.check_valid_placement(self.preview_piece):
             self.game_over = True
@@ -252,15 +317,12 @@ class Tetris:
     def draw(self):
         self.screen.fill(CREAM)
 
-        # Draw player bar
-        pygame.draw.rect(self.screen, WHITE, (0, 0, SCREEN_WIDTH, PLAYER_BAR_HEIGHT))
-
         # Draw grid
         for y in range(GRID_HEIGHT):
             for x in range(GRID_WIDTH):
                 # Draw cell borders (single line)
                 pygame.draw.rect(self.screen, BLACK,
-                             (x * BLOCK_SIZE, y * BLOCK_SIZE + PLAYER_BAR_HEIGHT,
+                             (x * BLOCK_SIZE, y * BLOCK_SIZE + TOP_MARGIN,
                               BLOCK_SIZE - 1, BLOCK_SIZE - 1), 1)
                 
                 # Draw terrain if exists
@@ -270,14 +332,14 @@ class Tetris:
                     if img:
                         self.screen.blit(img, 
                                         (x * BLOCK_SIZE, 
-                                         y * BLOCK_SIZE + PLAYER_BAR_HEIGHT))
+                                         y * BLOCK_SIZE + TOP_MARGIN))
         
         # Draw block group borders (double line)
         for block_y in range(BLOCK_COUNT):
             for block_x in range(BLOCK_COUNT):
                 # Calculate the position of the block group
                 start_x = block_x * FILL_BLOCK * BLOCK_SIZE
-                start_y = block_y * FILL_BLOCK * BLOCK_SIZE + PLAYER_BAR_HEIGHT
+                start_y = block_y * FILL_BLOCK * BLOCK_SIZE + TOP_MARGIN
                 width = FILL_BLOCK * BLOCK_SIZE
                 height = FILL_BLOCK * BLOCK_SIZE
                 
@@ -288,23 +350,12 @@ class Tetris:
                 pygame.draw.rect(self.screen, BLACK,
                                (start_x + 2, start_y + 2, width - 4, height - 4), 1)
 
-        # Draw player slots area (black background)
-        player_slots_x = BLOCK_SIZE * GRID_WIDTH
-        pygame.draw.rect(self.screen, BLACK,
-                       (player_slots_x, PLAYER_BAR_HEIGHT,
-                        PLAYER_SLOT_WIDTH, BLOCK_SIZE * GRID_HEIGHT))
-
         # Draw player slots
-        slot_height = (BLOCK_SIZE * GRID_HEIGHT) // PLAYER_SLOTS
         for i in range(PLAYER_SLOTS):
-            y = PLAYER_BAR_HEIGHT + i * slot_height
-            # Draw slot border
-            pygame.draw.rect(self.screen, WHITE,
-                           (player_slots_x, y,
-                            PLAYER_SLOT_WIDTH, slot_height), 1)
+            self.draw_player_slot(i, f'Player {i+1}')
 
         # Draw toolbar background
-        toolbar_y = PLAYER_BAR_HEIGHT + GRID_HEIGHT * BLOCK_SIZE
+        toolbar_y = TOP_MARGIN + GRID_HEIGHT * BLOCK_SIZE
         pygame.draw.rect(self.screen, WHITE,
                        (0, toolbar_y, SCREEN_WIDTH, TOOLBAR_HEIGHT))
 
@@ -331,26 +382,12 @@ class Tetris:
         if self.selected_piece and self.is_mouse_in_grid(self.mouse_pos):
             grid_x, grid_y = self.get_grid_pos_from_mouse(self.mouse_pos)
             x = grid_x * BLOCK_SIZE
-            y = grid_y * BLOCK_SIZE + PLAYER_BAR_HEIGHT
+            y = grid_y * BLOCK_SIZE + TOP_MARGIN
             self.draw_piece(self.selected_piece, x, y, alpha=128)
 
         # Draw tooltip if needed
         if self.show_tooltip and self.hover_piece:
             self.draw_tooltip()
-
-
-        # Draw score and level
-        font = pygame.font.Font(None, 36)
-        score_text = font.render(f'Score: {self.score}', True, BLACK)
-        level_text = font.render(f'Level: {self.level}', True, BLACK)
-        self.screen.blit(score_text, (GRID_WIDTH * BLOCK_SIZE + 10, 20))
-        self.screen.blit(level_text, (GRID_WIDTH * BLOCK_SIZE + 10, 60))
-
-        if self.game_over:
-            game_over_text = font.render('GAME OVER', True, RED)
-            self.screen.blit(game_over_text, (GRID_WIDTH * BLOCK_SIZE + 10, 100))
-            restart_text = font.render('Press R to restart', True, WHITE)
-            self.screen.blit(restart_text, (GRID_WIDTH * BLOCK_SIZE + 10, 140))
 
         pygame.display.flip()
 
@@ -423,7 +460,7 @@ class Tetris:
         
         # Check toolbar pieces
         if self.is_mouse_in_toolbar(mouse_pos):
-            toolbar_y = PLAYER_BAR_HEIGHT + GRID_HEIGHT * BLOCK_SIZE
+            toolbar_y = TOP_MARGIN + GRID_HEIGHT * BLOCK_SIZE
             piece_spacing = BLOCK_SIZE * GRID_WIDTH // (len(self.toolbar_pieces) + 1)
             for idx, piece in enumerate(self.toolbar_pieces):
                 piece_x = piece_spacing * (idx + 1) - (len(piece['shape'][0]) * BLOCK_SIZE) // 2
@@ -447,7 +484,7 @@ class Tetris:
     def handle_toolbar_click(self):
         # Get mouse position
         x, y = self.mouse_pos
-        toolbar_y = PLAYER_BAR_HEIGHT + GRID_HEIGHT * BLOCK_SIZE
+        toolbar_y = TOP_MARGIN + GRID_HEIGHT * BLOCK_SIZE
 
         # Calculate piece positions using only the left side width
         available_width = BLOCK_SIZE * GRID_WIDTH
