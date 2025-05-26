@@ -13,24 +13,25 @@ class Player:
     def __init__(self):
         self.name = None
         self.resources = {
-            PlayerResource.Gold.value: 100,
-            PlayerResource.Food.value: 100,
-            PlayerResource.Wood.value: 100,
-            PlayerResource.Stone.value: 0,
-            PlayerResource.Faith.value: 0,
-            PlayerResource.Decree.value: 0,
-            PlayerResource.Citizen.value: 0
+            PlayerResource.Gold: 100,
+            PlayerResource.Food: 100,
+            PlayerResource.Wood: 100,
+            PlayerResource.Stone: 0,
+            PlayerResource.Faith: 0,
+            PlayerResource.Decree: 0,
+            PlayerResource.Citizen: 0
         }
 
     def ResourceEnough(self, cost: dict) -> bool:
-        for resource in cost:
-            if self.resources[resource] < cost[resource]:
+        print(cost)
+        for resource, count in cost.items():
+            if self.resources[resource] < count:
                 return False
         return True
 
     def Cost(self, cost: dict):
-        for resource in cost:
-            self.resources[resource] -= cost[resource]
+        for resource, count in cost.items():
+            self.resources[resource] -= count
         
     def Serialize(self):
         ret = dict()

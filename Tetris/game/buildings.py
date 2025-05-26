@@ -12,6 +12,7 @@ class BuildingFactory:
     def __init__(self):
         self.buildings = {}
         self.config_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data', 'Buildings.xml')
+        self.ReadConfig()
     
     def ReadConfig(self):
         """从 XML 配置文件中读取建筑定义"""
@@ -32,7 +33,7 @@ class BuildingFactory:
                 building_instance['name'] = name
                 building_instance['shape'] = Shape[shape]
                 building_instance['tags'] = [tag.strip() for tag in tags if tag.strip()]
-                
+
                 
                 # 解析升级成本
                 cost_element = building.find('Cost')
@@ -42,14 +43,17 @@ class BuildingFactory:
                         resource_type = resource.get('Type')
                         amounts = resource.get('Amount').split('/')
                         
-                        # 处理每个等级的成本
-                        for level, amount in enumerate(amounts, start=2):
+                        # 处理每个等级的成本，从0级开始
+                        max_level = 2  # 通常有3个等级 (0,1,2)
+                        for level in range(max_level + 1):
                             if level not in upgrade_costs:
                                 upgrade_costs[level] = {}
+                            # 如果当前等级超出了amounts列表长度，视为0
+                            amount = amounts[level] if level < len(amounts) else '0'
                             if amount != '0':
                                 upgrade_costs[level][PlayerResource[resource_type]] = int(amount)
                     
-                    building_instance.upgrade_cost = upgrade_costs
+                    building_instance['cost'] = upgrade_costs
                 
                 # 将建筑实例添加到字典中
                 self.buildings[building_id] = building_instance
@@ -62,6 +66,13 @@ class BuildingFactory:
         """根据ID获取建筑实例"""
         return self.buildings.get(id, None)
     
+    def GetCostById(self, id, level):
+        """根据ID获取建筑升级成本"""
+        building = self.GetBuildingById(id)
+        if building is None:
+            return None
+        return building['cost'].get(level, None)
+
     def GetAllBuildings(self):
         """获取所有建筑实例"""
         return self.buildings
@@ -69,5 +80,6 @@ class BuildingFactory:
 if __name__ == '__main__':
     main = BuildingFactory()
     main.ReadConfig()
-    building = main.GetBuildingById(1)
+    building = main.GetBuildingById(59)
     print(building)
+    print(main.GetCostById(59, 0))

@@ -6,12 +6,13 @@ try:
     from Tetris.game.deck import Deck, DEFAULT_MAP_SETTING
     from Tetris.game.terrain import Puzzle, Terrain, Shape, ShapeHelper
     from Tetris.game.player import Player
+    from Tetris.game.buildings import BuildingFactory
 except:
     from desktop import Desktop
     from deck import Deck, DEFAULT_MAP_SETTING
     from terrain import Puzzle, Terrain, Shape, ShapeHelper
     from player import Player
-
+    from buildings import BuildingFactory
 
 def rotate_point(x, y, rotate):
     if rotate == 0:
@@ -26,6 +27,7 @@ def rotate_point(x, y, rotate):
 class Manager:
     def __init__(self):
         self.shape_helper = ShapeHelper()
+        self.BuildingFactory = BuildingFactory()
         self.Desktop = None
         self.puzzle_deck = None
         self.setting = DEFAULT_MAP_SETTING
@@ -278,8 +280,11 @@ class Manager:
         if self.Placeable(player, x, y, puzzle, rotate):
             puzzle.owner = player.name
         # Try to place the puzzle on the desktop
-        if player.ResourceEnough(puzzle.place_cost):
-            player.Cost(puzzle.place_cost)
+        cost = self.BuildingFactory.GetCostById(puzzle.building_id, puzzle.building_level)
+        if cost is None:
+            print(f"Cost is None. building_id: {puzzle.building_id}, level: {puzzle.building_level}")
+        if player.ResourceEnough(cost):
+            player.Cost(cost)
             puzzle.x = x
             puzzle.y = y
             puzzle.rotation = rotate            
