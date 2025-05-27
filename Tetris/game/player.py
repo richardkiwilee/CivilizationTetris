@@ -13,13 +13,13 @@ class Player:
     def __init__(self):
         self.name = None
         self.resources = {
-            PlayerResource.Gold: 100,
-            PlayerResource.Food: 100,
-            PlayerResource.Wood: 100,
-            PlayerResource.Stone: 0,
-            PlayerResource.Faith: 0,
-            PlayerResource.Decree: 0,
-            PlayerResource.Citizen: 0
+            PlayerResource.Gold.value: 100,
+            PlayerResource.Food.value: 100,
+            PlayerResource.Wood.value: 100,
+            PlayerResource.Stone.value: 0,
+            PlayerResource.Faith.value: 0,
+            PlayerResource.Decree.value: 0,
+            PlayerResource.Citizen.value: 0
         }
 
     def ResourceEnough(self, cost: dict) -> bool:

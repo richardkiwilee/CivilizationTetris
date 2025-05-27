@@ -51,7 +51,7 @@ class BuildingFactory:
                             # 如果当前等级超出了amounts列表长度，视为0
                             amount = amounts[level] if level < len(amounts) else '0'
                             if amount != '0':
-                                upgrade_costs[level][PlayerResource[resource_type]] = int(amount)
+                                upgrade_costs[level][PlayerResource[resource_type].value] = int(amount)
                     
                     building_instance['cost'] = upgrade_costs
                 

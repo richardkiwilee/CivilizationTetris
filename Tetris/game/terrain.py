@@ -21,6 +21,7 @@ def rotate_point(px, py, rotation):
     return px, py
 
 class Terrain(Enum):
+    Unknown = 0
     Plain = 1       # 平原
     Forest = 2      # 森林
     River = 3       # 河流
@@ -31,6 +32,7 @@ class Terrain(Enum):
     Building = 8    # 建筑  具体建筑类型通过Building查询
 
 class BuildingType(Enum):
+    Unknown = 0
     Production = 1          # 生产建筑
     Military = 2            # 军事建筑
     Religion = 3            # 宗教建筑
@@ -39,6 +41,7 @@ class BuildingType(Enum):
     Special = 6             # 特殊建筑
 
 class BuildingTag(Enum):
+    Unknown = 0
     Production = 1          # 生产建筑
     Military = 2            # 军事建筑
     Religion = 3            # 宗教建筑
@@ -108,16 +111,17 @@ class ShapeHelper:
 
 
 class Forces(Enum):
-    Normal = 0     # 不受任何克制
-    Light = 1      # 轻装
-    Heavy = 2      # 重装
-    Range = 3      # 远程
+    Unknown = 0
+    Normal = 1     # 不受任何克制
+    Light = 2      # 轻装
+    Heavy = 3      # 重装
+    Range = 4      # 远程
 
 
 class Cell:
     def __init__(self):
         self.owner = None
-        self.terrainType = None
+        self.terrainType = Terrain.Unknown.value
         self.puzzle_id = None
         self.building_id = None
 
@@ -126,7 +130,7 @@ class Cell:
         if self.owner:  
             ret['owner'] = self.owner
         if self.terrainType:  
-            ret['terrainType'] = self.terrainType
+            ret['terrainType'] = self.terrainType.value
         if self.puzzle_id:  
             ret['puzzle_id'] = self.puzzle_id
         if self.building_id:  
@@ -151,7 +155,7 @@ class Puzzle:
         self.y = None   # 中心坐标y
         self.rotation = None   # 旋转角度
 
-        self.terrainType = None   # 地形类型
+        self.terrainType = Terrain.Unknown.value   # 地形类型
         self.shape = None   # 形状        
         self.building_id = None   # 建筑id 如果是None则表示这个拼块不是一个建筑
         self.building_level = None   # 建筑等级 如果是None则表示这个拼块不是一个建筑
@@ -186,12 +190,13 @@ class Puzzle:
         self.puzzle_id = data['puzzle_id']
         self.x = data['x'] if 'x' in data else None
         self.y = data['y'] if 'y' in data else None
-        self.terrainType = data['terrainType']
+        # 保持terrainType为数值形式，因为它本身就是枚举的value
+        self.terrainType = data['terrainType'] if 'terrainType' in data else Terrain.Unknown.value
         self.shape = data['shape']
         self.rotation = data['rotation'] if 'rotation' in data else None
         self.building_id = data['building_id'] if 'building_id' in data else None
         self.building_level = data['building_level'] if 'building_level' in data else None
-        self.army = data['army'] if 'army' in data else None
+        self.army = data['army'] if 'army' in data else 0
         self.army_owner = data['army_owner'] if 'army_owner' in data else None
 
 def load_puzzle(data):

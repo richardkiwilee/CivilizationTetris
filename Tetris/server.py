@@ -41,13 +41,23 @@ class LobbyServicer(rpc.LobbyServicer):
         self.status = GameStatus.LOBBY.value
         self.host = None
         self.users = dict()     # 记录当前大厅的玩家状态
-        self.player_order = list()
+        self.player_order = []  # 玩家名字列表，按加入顺序决定回合顺序
         self.current_player_index = 0
         self.seq = 0
+        self.deck = None
 
     def StartGame(self):
+        # 设置游戏状态
         self.status = GameStatus.IN_GAME.value
+        # 初始化游戏管理器
         self.gm.StartGame()
+        # 使用已有的player_order（按加入顺序）
+        for username in self.player_order:
+            self.gm.AddPlayer(username)
+        # 重置当前玩家索引
+        self.current_player_index = 0
+        # 初始化游戏相关组件
+        self.deck = self.gm.puzzle_deck
 
     def Handle(self, request, context):
         resp = {'type': None, 'msg': ''}
@@ -65,15 +75,24 @@ class LobbyServicer(rpc.LobbyServicer):
         if self.status == GameStatus.LOBBY.value:
             if action == PlayerAction.Login.value:
                 username = body['arg1']
+                # 第一个玩家作为房主
                 if len(self.users) == 0:
                     self.host = username
+                # 新玩家加入
                 if username not in self.users:
                     self.users[username] = dict()
                     self.users[username]['ready'] = False
+                    # 将玩家添加到玩家顺序列表
+                    if username not in self.player_order:
+                        self.player_order.append(username)
                     self._broadcast()
                     logger.debug(f'User {username} logined')
                     return self._response(SystemResponse.OK, resp)
+                # 玩家重新连接
                 else:
+                    # 如果玩家不在顺序列表中（可能是由于之前的退出），重新添加
+                    if username not in self.player_order:
+                        self.player_order.append(username)
                     self._broadcast()
                     logger.debug(f'User {username} logined')
                     return self._response(SystemResponse.OK, resp)
@@ -82,6 +101,9 @@ class LobbyServicer(rpc.LobbyServicer):
                 username = body['arg1']
                 if username in self.users:
                     self.users.pop(username)
+                    # 从玩家顺序列表中移除
+                    if username in self.player_order:
+                        self.player_order.remove(username)
                     self._broadcast()
                 resp['msg'] = f'{username} Logout'
                 logger.debug(f'User {username} logout')
@@ -109,9 +131,9 @@ class LobbyServicer(rpc.LobbyServicer):
         # 游戏进行中状态
         if self.status == GameStatus.IN_GAME.value:
             # 检查是否是当前玩家的回合
-            if sender != self.gm.player_order[self.gm.current_player_index].username:
+            if sender != self.player_order[self.current_player_index].username:
                 self._broadcast()
-                resp['msg'] = f'Not your turn, current player index: {self.gm.current_player_index}'
+                resp['msg'] = f'Not your turn, current player index: {self.current_player_index}'
                 return self._response(SystemResponse.ERROR, resp) 
 
             if action == PlayerAction.EndTurn.value:
@@ -164,10 +186,30 @@ class LobbyServicer(rpc.LobbyServicer):
             user['ready'] = False
 
     def getPlayerFromSender(self, sender: str):
-        for player in self.gm.player_order:
-            if player.username == sender:
-                return player
+        if sender in self.player_order:
+            return sender
         return None
+        
+    def player_exit(self, username: str):
+        """处理玩家退出"""
+        # 从玩家顺序列表中移除
+        if username in self.player_order:
+            self.player_order.remove(username)
+        
+        # 如果是游戏中状态
+        if self.status == GameStatus.IN_GAME.value:
+            if len(self.player_order) > 0:
+                # 如果退出的是当前玩家，移动到下一个玩家
+                if self.current_player_index >= len(self.player_order):
+                    self.current_player_index = 0
+            else:
+                # 如果没有玩家了，重置游戏状态
+                self.status = GameStatus.LOBBY.value
+        
+        # 如果是大厅状态，检查是否需要更换房主
+        elif self.status == GameStatus.LOBBY.value and username == self.host and len(self.users) > 0:
+            # 选择新房主（第一个在线的玩家）
+            self.host = next(iter(self.users.keys()))
 
 
     def Subscribe(self, request, context):
@@ -227,11 +269,9 @@ class LobbyServicer(rpc.LobbyServicer):
                     ready_status[user] = _data['ready']
                 data['ready_status'] = ready_status
             if data['status'] == GameStatus.IN_GAME.value:
-                data['current_player_index'] = self.gm.current_player_index
-                data['players'] = [p.to_dict() for p in self.gm.player_order]
-                data['public_cards'] = [c.to_dict() for c in self.gm.public_cards]
-                data['last_used_cards'] = [c.to_dict() for c in self.gm.last_used_cards]
-                data['deck'] = self.gm.deck.dump()
+                data['current_player_index'] = self.current_player_index
+                data['players'] = self.player_order
+                data['manager'] = self.gm.Serialize()
         except Exception as ex:
             logger.error(f'Error in broadcast: {ex}')
             traceback.print_exc()
@@ -261,7 +301,7 @@ class LobbyServicer(rpc.LobbyServicer):
                     if 'stream' in user_data:
                         user_data['stream'].put(None)
                     self.users.pop(username)
-                    self.gm.player_exit(username)
+                    self.player_exit(username)
                     self._broadcast()
                     logger.debug(f'User {username} disconnected')
             except Exception as e:
