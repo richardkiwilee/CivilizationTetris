@@ -227,22 +227,28 @@ class Client:
                 pygame.draw.rect(self.screen, BLACK, rect, 1)
         
         # Draw game state if available
-        if self.game_state:
+        if self.game_state == GameStatus.IN_GAME.value:
             with self.game_state_lock:
-                for y, row in enumerate(self.game_state):
-                    for x, cell in enumerate(row):
-                        if cell and cell.get('owner'):
-                            rect = pygame.Rect(
-                                x * BLOCK_SIZE,
-                                TOP_MARGIN + y * BLOCK_SIZE,
-                                BLOCK_SIZE - 1,
-                                BLOCK_SIZE - 1
-                            )
-                            pygame.draw.rect(self.screen, WHITE, rect)
-                            if cell.get('building_id'):
-                                text = self.font.render(str(cell['building_id']), True, BLACK)
-                                text_rect = text.get_rect(center=rect.center)
-                                self.screen.blit(text, text_rect)
+                # 从服务器获取的游戏状态应该在manager中
+                if hasattr(self, 'game_manager'):
+                    try:
+                        desktop_data = json.loads(self.game_manager.get('Desktop', '[]'))
+                        for y, row in enumerate(desktop_data):
+                            for x, cell in enumerate(row):
+                                if cell and cell.get('owner'):
+                                    rect = pygame.Rect(
+                                        x * BLOCK_SIZE,
+                                        TOP_MARGIN + y * BLOCK_SIZE,
+                                        BLOCK_SIZE - 1,
+                                        BLOCK_SIZE - 1
+                                    )
+                                    pygame.draw.rect(self.screen, WHITE, rect)
+                                    if cell.get('building_id'):
+                                        text = self.font.render(str(cell['building_id']), True, BLACK)
+                                        text_rect = text.get_rect(center=rect.center)
+                                        self.screen.blit(text, text_rect)
+                    except json.JSONDecodeError as e:
+                        print(f'Error decoding desktop data: {e}')
         
         # Draw player slots
         for i in range(PLAYER_SLOTS):
@@ -296,7 +302,6 @@ class Client:
                 for message in response:
                     try:
                         data = json.loads(message.body)
-                        print(data)
                         if isinstance(data, dict):
                             if data['status'] == GameStatus.LOBBY.value and 'ready_status' in data:
                                 # Clear all slots first
@@ -317,6 +322,9 @@ class Client:
                             if data['status'] == GameStatus.IN_GAME.value:
                                 # 更新游戏状态
                                 self.update_game_state(data['status'])
+                                # 保存游戏管理器状态
+                                if 'manager' in data:
+                                    self.game_manager = data['manager']
                                 # 更新玩家顺序
                                 if 'players' in data:
                                     for i, player_name in enumerate(data['players']):
@@ -419,6 +427,7 @@ def main():
             client.handle_quit()
     except Exception as e:
         print(f'Error: {e}')
+        traceback.print_exc()
         if client:
             client.handle_quit()
 
