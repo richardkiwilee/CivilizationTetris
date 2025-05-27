@@ -318,7 +318,8 @@ class Manager:
         ret['Desktop'] = self.Desktop.Serialize()
         ret['puzzle_deck'] = self.puzzle_deck.Serialize()
         ret['setting'] = self.setting
-        ret['puzzle_objs'] = self.puzzle_objs
+        # 序列化puzzle_objs
+        ret['puzzle_objs'] = {puzzle_id: puzzle.dump() for puzzle_id, puzzle in self.puzzle_objs.items()}
         ret['players'] = {name: player.Serialize() for name, player in self.players.items()}
         return ret
 

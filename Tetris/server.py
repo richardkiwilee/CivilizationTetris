@@ -131,7 +131,7 @@ class LobbyServicer(rpc.LobbyServicer):
         # 游戏进行中状态
         if self.status == GameStatus.IN_GAME.value:
             # 检查是否是当前玩家的回合
-            if sender != self.player_order[self.current_player_index].username:
+            if sender != self.player_order[self.current_player_index]:
                 self._broadcast()
                 resp['msg'] = f'Not your turn, current player index: {self.current_player_index}'
                 return self._response(SystemResponse.ERROR, resp) 
@@ -266,7 +266,7 @@ class LobbyServicer(rpc.LobbyServicer):
             if data['status'] == GameStatus.LOBBY.value:
                 ready_status = dict()
                 for user, _data in self.users.items():
-                    ready_status[user] = _data['ready']
+                    ready_status[user] = _data.get('ready', False)
                 data['ready_status'] = ready_status
             if data['status'] == GameStatus.IN_GAME.value:
                 data['current_player_index'] = self.current_player_index

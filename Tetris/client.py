@@ -161,23 +161,35 @@ class Client:
             
             # Draw resources
             resource_font = pygame.font.Font(None, 20)
-            left_resources = ['food', 'wood', 'stone']
-            right_resources = ['gold', 'faith', 'citizen', 'order']
+            # 资源类型对应关系，从枚举值映射到资源名称
+            resource_mapping = {
+                1: 'food',   # PlayerResource.Food.value
+                2: 'wood',   # PlayerResource.Wood.value
+                3: 'stone',  # PlayerResource.Stone.value
+                0: 'gold',   # PlayerResource.Gold.value
+                6: 'faith',  # PlayerResource.Faith.value
+                8: 'citizen',# PlayerResource.Citizen.value
+                7: 'order'   # PlayerResource.Decree.value
+            }
+            left_resources = [1, 2, 3]  # Food, Wood, Stone
+            right_resources = [0, 6, 8, 7]  # Gold, Faith, Citizen, Order
             
             # Left column resources
-            for i, resource in enumerate(left_resources):
+            for i, resource_id in enumerate(left_resources):
                 icon_y = y + 30 + i * (RESOURCE_ICON_SIZE + 5)
-                if self.resource_images.get(resource):
-                    self.screen.blit(self.resource_images[resource], (x + 5, icon_y))
-                value_text = resource_font.render(str(resources[resource]), True, BLACK)
+                resource_name = resource_mapping.get(resource_id)
+                if resource_name and self.resource_images.get(resource_name):
+                    self.screen.blit(self.resource_images[resource_name], (x + 5, icon_y))
+                value_text = resource_font.render(str(resources.get(resource_id, 0)), True, BLACK)
                 self.screen.blit(value_text, (x + RESOURCE_ICON_SIZE + 10, icon_y + 2))
             
             # Right column resources
-            for i, resource in enumerate(right_resources):
+            for i, resource_id in enumerate(right_resources):
                 icon_y = y + 30 + i * (RESOURCE_ICON_SIZE + 5)
-                if self.resource_images.get(resource):
-                    self.screen.blit(self.resource_images[resource], (x + PLAYER_SLOT_WIDTH//2, icon_y))
-                value_text = resource_font.render(str(resources[resource]), True, BLACK)
+                resource_name = resource_mapping.get(resource_id)
+                if resource_name and self.resource_images.get(resource_name):
+                    self.screen.blit(self.resource_images[resource_name], (x + PLAYER_SLOT_WIDTH//2, icon_y))
+                value_text = resource_font.render(str(resources.get(resource_id, 0)), True, BLACK)
                 self.screen.blit(value_text, (x + PLAYER_SLOT_WIDTH//2 + RESOURCE_ICON_SIZE + 5, icon_y + 2))
             
             # Draw special effects slots
@@ -303,7 +315,23 @@ class Client:
                                     all_ready = all(is_ready for is_ready in data['ready_status'].values())
                                     self.buttons[0]['text'] = 'Start' if all_ready else 'Ready'
                             if data['status'] == GameStatus.IN_GAME.value:
+                                # 更新游戏状态
                                 self.update_game_state(data['status'])
+                                # 更新玩家顺序
+                                if 'players' in data:
+                                    for i, player_name in enumerate(data['players']):
+                                        if i < PLAYER_SLOTS:
+                                            # 从管理器中获取玩家资源
+                                            player_resources = {}
+                                            if 'manager' in data and 'players' in data['manager']:
+                                                player_data = data['manager']['players'].get(player_name, {})
+                                                if isinstance(player_data, dict) and 'resources' in player_data:
+                                                    player_resources = player_data['resources']
+                                            self.players[i] = {
+                                                'name': player_name,
+                                                'resources': player_resources,
+                                                'ready': True  # 游戏中所有玩家都是就绪状态
+                                            }
                     except json.JSONDecodeError:
                         print('Error decoding message:', message.body)
                     except Exception as e:
@@ -395,4 +423,9 @@ def main():
             client.handle_quit()
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print('\nReceived shutdown signal')
+        if client:
+            client.handle_quit()
