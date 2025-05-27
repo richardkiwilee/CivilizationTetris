@@ -11,6 +11,8 @@ import Tetris.protocol.service_pb2 as pb2
 import Tetris.protocol.service_pb2_grpc as rpc
 from enum import Enum
 
+from Tetris.server import GameStatus
+
 # Initialize Pygame
 pygame.init()
 pygame.font.init()
@@ -82,8 +84,7 @@ class Client:
         # Button setup
         button_x = BLOCK_SIZE * GRID_WIDTH + (PLAYER_SLOT_WIDTH - BUTTON_WIDTH) // 2
         self.buttons = [
-            {'text': 'Ready', 'rect': pygame.Rect(button_x, SCREEN_HEIGHT - TOOLBAR_HEIGHT + 20, BUTTON_WIDTH, BUTTON_HEIGHT)},
-            {'text': 'Cancel', 'rect': pygame.Rect(button_x, SCREEN_HEIGHT - TOOLBAR_HEIGHT + 70, BUTTON_WIDTH, BUTTON_HEIGHT)}
+            {'text': 'Ready', 'rect': pygame.Rect(button_x, SCREEN_HEIGHT - TOOLBAR_HEIGHT + 20, BUTTON_WIDTH, BUTTON_HEIGHT)}
         ]
         
         # Initialize empty player slots
@@ -251,8 +252,8 @@ class Client:
             if button['rect'].collidepoint(pos):
                 if button['text'] == 'Ready':
                     self.sendMessage(PlayerAction.Ready.value, self.username)
-                elif button['text'] == 'Cancel':
-                    self.sendMessage(PlayerAction.Cancel.value, self.username)
+                elif button['text'] == 'Start':
+                    self.sendMessage(PlayerAction.StartGame.value, self.username)
                 break
 
     def run(self):
@@ -283,11 +284,26 @@ class Client:
                 for message in response:
                     try:
                         data = json.loads(message.body)
+                        print(data)
                         if isinstance(data, dict):
-                            if 'users' in data:  # Player list update
-                                self.update_players(data['users'])
-                            if 'game_state' in data:  # Game state update
-                                self.update_game_state(data['game_state'])
+                            if data['status'] == GameStatus.LOBBY.value and 'ready_status' in data:
+                                # Clear all slots first
+                                self.players = {i: None for i in range(PLAYER_SLOTS)}
+                                # Fill slots in order of ready_status dictionary
+                                for i, (player_name, is_ready) in enumerate(data['ready_status'].items()):
+                                    if i < PLAYER_SLOTS:
+                                        self.players[i] = {
+                                            'name': player_name,
+                                            'resources': {},
+                                            'ready': is_ready
+                                        }
+                                # Update button text for host (first player)
+                                if self.username == list(data['ready_status'].keys())[0]:
+                                    # Check if all players are ready
+                                    all_ready = all(is_ready for is_ready in data['ready_status'].values())
+                                    self.buttons[0]['text'] = 'Start' if all_ready else 'Ready'
+                            if data['status'] == GameStatus.IN_GAME.value:
+                                self.update_game_state(data['status'])
                     except json.JSONDecodeError:
                         print('Error decoding message:', message.body)
                     except Exception as e:
