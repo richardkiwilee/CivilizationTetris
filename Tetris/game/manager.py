@@ -64,9 +64,10 @@ class Manager:
         self.puzzle_deck = Deck(self.setting)
         self.puzzle_deck.init()
         for player in self.players.values():
+            print(player.name)
             for i in range(0, 5):
-                puzzle = self.puzzle_deck.Draw()
-                player.puzzles.append(puzzle)
+                self.PlayerDraw(player)
+            print(player.puzzles)
 
     def GetPuzzle(self, x, y) -> Optional[Puzzle]:
         if self.Desktop is None:

@@ -139,13 +139,36 @@ class Client:
                 images[resource_name] = None
         return images
 
+    def get_shape_matrix(self, shape_name):
+        """Convert shape name to shape matrix"""
+        if shape_name == 'Corner':
+            return [
+                [1, 1],
+                [1, 0]
+            ]
+        elif shape_name == 'O':
+            return [
+                [1, 1],
+                [1, 1]
+            ]
+        # Add more shapes as needed
+        return [[1]]  # Default single block
+    
+    def get_terrain_color(self, terrain_type):
+        """Get color based on terrain type"""
+        colors = {
+            8: (100, 200, 100),  # Example color for terrain type 8
+            # Add more terrain colors as needed
+        }
+        return colors.get(terrain_type, (100, 100, 100))  # Default gray
+    
     def draw_piece(self, piece, x, y, alpha=255):
         """Draw a puzzle piece at the specified position"""
         if not piece or 'shape' not in piece:
             return
             
         shape = piece['shape']
-        color = piece.get('color', (100, 100, 100))  # Default gray if no color specified
+        color = self.get_terrain_color(piece.get('terrain', 0))
         
         # Create a surface for the piece with alpha channel
         piece_width = len(shape[0]) * BLOCK_SIZE
@@ -188,6 +211,7 @@ class Client:
         
         # Handle different game states
         if self.game_state == GameStatus.IN_GAME.value:
+            print(self.toolbar_pieces)
             # Draw toolbar pieces in the left side
             available_width = BLOCK_SIZE * GRID_WIDTH
             if self.toolbar_pieces:
@@ -403,6 +427,15 @@ class Client:
                                     self.buttons[0]['text'] = 'Start' if all_ready else 'Ready'
                             if data['status'] == GameStatus.IN_GAME.value:
                                 # 更新游戏状态
+                                # data['manager']['players']
+                                # {'Player_298': {'name': 'Player_298', 'resources': {'0': 100, '1': 100, '2': 100, '3': 0, '6': 0, '7': 0, '8': 0}, 
+                                # 'puzzles': {
+                                # '623': {'puzzle_id': 623, 'terrainType': 8, 'shape': 'Corner', 'building_id': 62}, 
+                                # '663': {'puzzle_id': 663, 'terrainType': 8, 'shape': 'Corner', 'building_id': 66}, 
+                                # '666': {'puzzle_id': 666, 'terrainType': 8, 'shape': 'Corner', 'building_id': 66}, 
+                                # '239': {'puzzle_id': 239, 'terrainType': 8, 'shape': 'O', 'building_id': 23}, 
+                                # '345': {'puzzle_id': 345, 'terrainType': 8, 'shape': 'Corner', 'building_id': 34}}}
+                                # }
                                 self.update_game_state(data['status'])
                                 # 保存游戏管理器状态
                                 if 'manager' in data:
@@ -410,8 +443,19 @@ class Client:
                                     # 获取当前玩家的拼图块
                                     if 'players' in data['manager']:
                                         current_player_data = data['manager']['players'].get(self.username, {})
-                                        if isinstance(current_player_data, dict):
-                                            self.toolbar_pieces = current_player_data.get('puzzles', [])
+                                        if isinstance(current_player_data, dict) and 'puzzles' in current_player_data:
+                                            puzzles_data = current_player_data['puzzles']
+                                            self.toolbar_pieces = []
+                                            for puzzle_id, puzzle_info in puzzles_data.items():
+                                                # Convert puzzle info to the format expected by draw_piece
+                                                piece = {
+                                                    'id': puzzle_id,
+                                                    'shape': self.get_shape_matrix(puzzle_info['shape']),
+                                                    'terrain': puzzle_info['terrainType'],
+                                                    'building_id': puzzle_info['building_id'],
+                                                    'is_valid': True
+                                                }
+                                                self.toolbar_pieces.append(piece)
                                 # 更新玩家顺序
                                 if 'players' in data:
                                     for i, player_name in enumerate(data['players']):
@@ -428,6 +472,7 @@ class Client:
                                                 'ready': True  # 游戏中所有玩家都是就绪状态
                                             }
                                 # 仅显示自己的手牌
+                                self.draw()
                     except json.JSONDecodeError:
                         print('Error decoding message:', message.body)
                     except Exception as e:

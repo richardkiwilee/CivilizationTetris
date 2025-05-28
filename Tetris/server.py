@@ -49,11 +49,11 @@ class LobbyServicer(rpc.LobbyServicer):
     def StartGame(self):
         # 设置游戏状态
         self.status = GameStatus.IN_GAME.value
-        # 初始化游戏管理器
-        self.gm.StartGame()
         # 使用已有的player_order（按加入顺序）
         for username in self.player_order:
             self.gm.AddPlayer(username)
+        # 初始化游戏管理器
+        self.gm.StartGame()
         # 重置当前玩家索引
         self.current_player_index = 0
         # 初始化游戏相关组件
@@ -268,14 +268,14 @@ class LobbyServicer(rpc.LobbyServicer):
                 for user, _data in self.users.items():
                     ready_status[user] = _data.get('ready', False)
                 data['ready_status'] = ready_status
-                logger.debug(f'Broadcast: {data["status"]}')
-                logger.debug(f'Broadcast: {data["ready_status"]}')
+                logger.debug(f'Broadcast - Game Status:{data["status"]}')
+                logger.debug(f'Broadcast - Ready Status:{data["ready_status"]}')
             if data['status'] == GameStatus.IN_GAME.value:
                 data['current_player_index'] = self.current_player_index
                 data['players'] = self.player_order
                 data['manager'] = self.gm.Serialize()
-                logger.debug(f'Broadcast: {data["status"]}')        
-                logger.debug(f'Broadcast: {data["current_player_index"]}')       
+                logger.debug(f'Broadcast - Game Status:{data["status"]}')        
+                logger.debug(f'Broadcast - Current Player Index:{data["current_player_index"]}')       
         except Exception as ex:
             logger.error(f'Error in broadcast: {ex}')
             traceback.print_exc()
