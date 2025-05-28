@@ -136,10 +136,6 @@ class Client:
         # Initialize lobby
         self.sendMessage(PlayerAction.Sync.value, self.username, None, None, None, None)
         logger.info("Sync to server successfully")
-        
-        # Start game loop
-        logger.info("Starting game loop")
-        self.run()
 
     def set_state_callback(self, callback):
         """Set callback function for game state updates"""
@@ -288,27 +284,35 @@ class Client:
         logger.info("Starting game loop...")
         self.running = True
         
-        while self.running:
-            # Handle events
-            for event in pygame.event.get():
-                logger.debug(f"Processing events: {event.type}")
-                if event.type == pygame.QUIT:
-                    logger.info("Received quit event")
-                    self.running = False
-                    break
-                # Handle other events here...
-            
-            # Draw game state
-            self.draw()
-            
-            # Update display
-            pygame.display.flip()
-            
-            # Control frame rate
-            self.clock.tick(60)
-        
-        logger.info("Game loop ended")
-        pygame.quit()
+        try:
+            while self.running:
+                # Handle events
+                for event in pygame.event.get():
+                    logger.debug(f"Processing event: {event.type}")
+                    if event.type == pygame.QUIT:
+                        logger.info("Received quit event")
+                        self.running = False
+                        break
+                    # Handle other events here...
+                
+                try:
+                    # Draw game state
+                    self.draw()
+                    
+                    # Update display
+                    pygame.display.flip()
+                except Exception as e:
+                    logger.error(f"Error in game loop: {e}")
+                    logger.error(traceback.format_exc())
+                
+                # Control frame rate
+                self.clock.tick(60)
+        except Exception as e:
+            logger.error(f"Fatal error in game loop: {e}")
+            logger.error(traceback.format_exc())
+        finally:
+            logger.info("Game loop ended")
+            pygame.quit()
     
     def draw(self):
         """Draw the game state"""
@@ -692,15 +696,50 @@ def main():
     
     client = None
     try:
+        logger.info("Creating client...")
         client = Client(args.username, args.address, args.port)
-        client.run()
+        logger.info("Client created, starting game loop...")
+        while True:
+            try:
+                # Handle events
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        logger.info("Received quit event")
+                        return
+                    elif event.type == pygame.MOUSEBUTTONDOWN:
+                        # 获取鼠标点击位置
+                        mouse_pos = pygame.mouse.get_pos()
+                        logger.debug(f"Mouse clicked at: {mouse_pos}")
+                        
+                        # 检查按钮点击
+                        if client.game_state != GameStatus.IN_GAME.value:
+                            for button in client.buttons:
+                                if button['rect'].collidepoint(mouse_pos):
+                                    logger.info(f"Button clicked: {button['text']}")
+                                    if button['text'] == 'Ready':
+                                        client.sendMessage(PlayerAction.Ready.value, client.username, None, None, None, None)
+                                    elif button['text'] == 'Start':
+                                        client.sendMessage(PlayerAction.Start.value, client.username, None, None, None, None)
+                
+                # Draw the current game state
+                client.draw()
+                
+                # Update display
+                pygame.display.flip()
+                
+                # Control frame rate
+                client.clock.tick(60)
+                
+            except Exception as e:
+                logger.error(f"Error in game loop: {e}")
+                logger.error(traceback.format_exc())
+                
     except KeyboardInterrupt:
         logger.info('\nReceived shutdown signal')
-        if client:
-            client.handle_quit()
     except Exception as e:
         logger.error(f'Error: {e}')
-        traceback.print_exc()
+        logger.error(traceback.format_exc())
+    finally:
         if client:
             client.handle_quit()
 
