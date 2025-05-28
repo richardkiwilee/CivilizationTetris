@@ -6,6 +6,7 @@ import sys
 import json
 import pygame
 import argparse
+import logging
 from Tetris.game.action import PlayerAction, SystemResponse
 import Tetris.protocol.service_pb2 as pb2
 import Tetris.protocol.service_pb2_grpc as rpc
@@ -13,10 +14,25 @@ from enum import Enum
 
 from Tetris.server import GameStatus
 
+# 配置日志记录器
+logger = logging.getLogger('CivilizationTetris')
+logger.setLevel(logging.DEBUG)
+
+# 创建控制台处理器
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.DEBUG)
+
+# 创建格式化器
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+console_handler.setFormatter(formatter)
+
+# 将处理器添加到日志记录器
+logger.addHandler(console_handler)
+
 # Initialize Pygame
 pygame.init()
 pygame.font.init()
-
+logger.info("Pygame initialized")
 # Game Constants
 BLOCK_SIZE = 30
 FILL_BLOCK = 7  # 定义 FILL_BLOCK * FILL_BLOCK是一个正方形的小分组
@@ -60,26 +76,31 @@ RED = (255, 0, 0)    # 无效放置提示
 
 class Client:
     def __init__(self, username: str, address='localhost', port=50051):
+        logger.info(f"Initializing client for user: {username}")
         self.username = username
         # 创建 gRPC 通道和存根
         channel = grpc.insecure_channel(address + ':' + str(port))
         self.stub = rpc.LobbyStub(channel)
+        logger.info("gRPC channel created")
         
         # Initialize Pygame window
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         pygame.display.set_caption(f'Civilization Tetris - {username}')
         self.clock = pygame.time.Clock()
         self.font = pygame.font.SysFont('simhei', 24)
+        logger.info("Pygame window initialized")
         
         # Load resources
         self.resource_images = self.load_resource_images()
+        logger.info("Resources loaded")
         
         # Game state
         self.running = True
-        self.game_state = None
+        self.game_state = GameStatus.LOBBY.value
         self.game_state_lock = threading.Lock()
         self.state_callback = None  # Callback for game state updates
         self.players = {}
+        self.toolbar_pieces = []
         
         # Button setup
         button_x = BLOCK_SIZE * GRID_WIDTH + (PLAYER_SLOT_WIDTH - BUTTON_WIDTH) // 2
@@ -99,7 +120,7 @@ class Client:
         loginResp = self.sendMessage(PlayerAction.Login.value, self.username, None, None, None, None)
         if not loginResp:
             raise Exception('Login failed')
-
+        logger.info("Login to server successfully")
         # Initialize current player's slot
         self.players[0] = {
             'name': self.username,
@@ -111,9 +132,14 @@ class Client:
         self.message_thread = threading.Thread(target=self.__listen_for_messages)
         self.message_thread.daemon = True
         self.message_thread.start()
-        
+        logger.info("Start message listener thread successfully")
         # Initialize lobby
         self.sendMessage(PlayerAction.Sync.value, self.username, None, None, None, None)
+        logger.info("Sync to server successfully")
+        
+        # Start game loop
+        logger.info("Starting game loop")
+        self.run()
 
     def set_state_callback(self, callback):
         """Set callback function for game state updates"""
@@ -135,7 +161,7 @@ class Client:
                 img = pygame.transform.scale(img, (RESOURCE_ICON_SIZE, RESOURCE_ICON_SIZE))
                 images[resource_name] = img
             except pygame.error as e:
-                print(f'Warning: Could not load image for {resource_name}: {e}')
+                logger.error(f'Warning: Could not load image for {resource_name}: {e}')
                 images[resource_name] = None
         return images
 
@@ -151,7 +177,20 @@ class Client:
                 [1, 1],
                 [1, 1]
             ]
-        # Add more shapes as needed
+        elif shape_name == 'L':
+            return [
+                [1, 0],
+                [1, 0],
+                [1, 1]
+            ]
+        elif shape_name == 'J':
+            return [
+                [0, 1],
+                [0, 1],
+                [1, 1]
+            ]
+        elif shape_name == 'Cell':
+            return [[1]]  # Single cell
         return [[1]]  # Default single block
     
     def get_terrain_color(self, terrain_type):
@@ -189,49 +228,151 @@ class Client:
                     block_color = (*color, alpha)
                     pygame.draw.rect(piece_surface, block_color, block_rect)
                     
+                    # Draw building ID if present
+                    if piece.get('building_id'):
+                        text = self.font.render(str(piece['building_id']), True, (0, 0, 0, alpha))
+                        text_rect = text.get_rect(center=block_rect.center)
+                        piece_surface.blit(text, text_rect)
+                    
         # Draw the piece surface on the screen
         self.screen.blit(piece_surface, (x, y))
     
+    def draw_game_board(self):
+        """Draw the game grid and placed pieces"""
+        logger.debug("=== Drawing Game Board ===")
+        logger.debug(f"Game State: {self.game_state}")
+        
+        # Draw grid lines
+        for y in range(GRID_HEIGHT):
+            for x in range(GRID_WIDTH):
+                rect = pygame.Rect(
+                    x * BLOCK_SIZE,
+                    TOP_MARGIN + y * BLOCK_SIZE,
+                    BLOCK_SIZE - 1,
+                    BLOCK_SIZE - 1
+                )
+                pygame.draw.rect(self.screen, BLACK, rect, 1)
+        
+        # Draw placed pieces if in game
+        if self.game_state == GameStatus.IN_GAME.value:
+            logger.debug("Game is IN_GAME state")
+            if hasattr(self, 'game_manager'):
+                logger.debug("Game manager exists")
+                try:
+                    desktop_data = json.loads(self.game_manager.get('Desktop', '[]'))
+                    logger.debug(f"Desktop data: {desktop_data}")
+                    for y, row in enumerate(desktop_data):
+                        for x, cell in enumerate(row):
+                            if cell and cell.get('owner'):
+                                rect = pygame.Rect(
+                                    x * BLOCK_SIZE,
+                                    TOP_MARGIN + y * BLOCK_SIZE,
+                                    BLOCK_SIZE - 1,
+                                    BLOCK_SIZE - 1
+                                )
+                                pygame.draw.rect(self.screen, WHITE, rect)
+                                if cell.get('building_id'):
+                                    text = self.font.render(str(cell['building_id']), True, BLACK)
+                                    text_rect = text.get_rect(center=rect.center)
+                                    self.screen.blit(text, text_rect)
+                except json.JSONDecodeError as e:
+                    logger.error(f"Error decoding desktop data: {e}")
+                except Exception as e:
+                    logger.error(f"Error drawing board: {e}")
+                    logger.error(traceback.format_exc())
+            else:
+                logger.debug("No game manager available")
+    
+    def run(self):
+        """Main game loop"""
+        logger.info("Starting game loop...")
+        self.running = True
+        
+        while self.running:
+            # Handle events
+            for event in pygame.event.get():
+                logger.debug(f"Processing events: {event.type}")
+                if event.type == pygame.QUIT:
+                    logger.info("Received quit event")
+                    self.running = False
+                    break
+                # Handle other events here...
+            
+            # Draw game state
+            self.draw()
+            
+            # Update display
+            pygame.display.flip()
+            
+            # Control frame rate
+            self.clock.tick(60)
+        
+        logger.info("Game loop ended")
+        pygame.quit()
+    
     def draw(self):
         """Draw the game state"""
-        # Fill background
-        self.screen.fill(CREAM)
-        
-        # Draw toolbar background
-        toolbar_y = TOP_MARGIN + GRID_HEIGHT * BLOCK_SIZE
-        pygame.draw.rect(self.screen, WHITE,
-                       (0, toolbar_y, SCREEN_WIDTH, TOOLBAR_HEIGHT))
-        
-        # Draw player slots
-        for i in range(PLAYER_SLOTS):
-            if i in self.players and self.players[i]:
-                self.draw_player_slot(i, self.players[i])
-            else:
-                self.draw_player_slot(i, None)
-        print(f'game_state: {self.game_state}')
-        # Handle different game states
-        if self.game_state == GameStatus.IN_GAME.value:
-            print('toolbar_pieces: ', self.toolbar_pieces)
-            # Draw toolbar pieces in the left side
-            available_width = BLOCK_SIZE * GRID_WIDTH
-            if self.toolbar_pieces:
-                piece_spacing = available_width // (len(self.toolbar_pieces) + 1)
-                for idx, piece in enumerate(self.toolbar_pieces):
-                    print(f'idx: {idx}, piece: {piece}')
-                    x = piece_spacing * (idx + 1) - (len(piece['shape'][0]) * BLOCK_SIZE) // 2
-                    y = toolbar_y + (TOOLBAR_HEIGHT - len(piece['shape']) * BLOCK_SIZE) // 2
-                    
-                    if piece.get('is_valid', True):  # Default to True if not specified
-                        self.draw_piece(piece, x, y)
-                    else:
-                        self.draw_piece(piece, x, y, alpha=128)
-        else:
-            # Draw Ready/Start button in lobby
-            for button in self.buttons:
-                pygame.draw.rect(self.screen, BLACK, button['rect'], 2)
-                text = self.font.render(button['text'], True, BLACK)
-                text_rect = text.get_rect(center=button['rect'].center)
-                self.screen.blit(text, text_rect)
+        logger.debug("Drawing game state...")
+        with self.game_state_lock:
+            logger.debug("\n=== Drawing Game State ===")
+            logger.debug(f"Game State: {self.game_state}")
+            logger.debug(f"Toolbar Pieces: {len(self.toolbar_pieces)}")
+            
+            # Fill background
+            self.screen.fill(CREAM)
+            
+            # Draw game grid and board pieces
+            self.draw_game_board()
+            
+            # Draw player slots on the right side
+            logger.debug("Drawing player slots...")
+            for i in range(PLAYER_SLOTS):
+                if i in self.players and self.players[i]:
+                    logger.debug(f"Player {i}: {self.players[i]['name']}")
+                    self.draw_player_slot(i, self.players[i])
+                else:
+                    logger.debug(f"Player {i}: Empty")
+                    self.draw_player_slot(i, None)
+            
+            # Draw toolbar at the bottom
+            toolbar_y = SCREEN_HEIGHT - TOOLBAR_HEIGHT
+            pygame.draw.rect(self.screen, WHITE, (0, toolbar_y, SCREEN_WIDTH, TOOLBAR_HEIGHT))
+            
+            # Draw toolbar pieces in IN_GAME state
+            if self.game_state == GameStatus.IN_GAME.value:
+                logger.debug("Drawing toolbar pieces...")
+                available_width = SCREEN_WIDTH
+                if self.toolbar_pieces:
+                    piece_spacing = available_width // (len(self.toolbar_pieces) + 1)
+                    for idx, piece in enumerate(self.toolbar_pieces):
+                        logger.debug(f"Piece {idx}: {piece}")
+                        if 'shape' not in piece or not piece['shape']:
+                            logger.debug(f"Skipping piece {idx} - invalid shape")
+                            continue
+                        
+                        # Center the pieces in the toolbar
+                        x = piece_spacing * (idx + 1) - (len(piece['shape'][0]) * BLOCK_SIZE) // 2
+                        y = toolbar_y + (TOOLBAR_HEIGHT - len(piece['shape']) * BLOCK_SIZE) // 2
+                        
+                        if piece.get('is_valid', True):
+                            self.draw_piece(piece, x, y)
+                        else:
+                            self.draw_piece(piece, x, y, alpha=128)
+                else:
+                    logger.error("No toolbar pieces to draw")
+            
+            # Draw buttons based on game state
+            if self.game_state != GameStatus.IN_GAME.value:
+                # Draw Ready/Start button in lobby
+                for button in self.buttons:
+                    pygame.draw.rect(self.screen, WHITE, button['rect'])
+                    pygame.draw.rect(self.screen, BLACK, button['rect'], 1)
+                    text = self.font.render(button['text'], True, BLACK)
+                    text_rect = text.get_rect(center=button['rect'].center)
+                    self.screen.blit(text, text_rect)
+            
+            # Update the display
+            pygame.display.flip()
         
         # Draw selected piece following mouse if exists
         if self.selected_piece and self.game_state == GameStatus.IN_GAME.value:
@@ -351,7 +492,7 @@ class Client:
                                         text_rect = text.get_rect(center=rect.center)
                                         self.screen.blit(text, text_rect)
                     except json.JSONDecodeError as e:
-                        print(f'Error decoding desktop data: {e}')
+                        logger.error(f'Error decoding desktop data: {e}')
         
         # Draw player slots
         for i in range(PLAYER_SLOTS):
@@ -380,6 +521,7 @@ class Client:
     def run(self):
         """Main game loop"""
         while self.running:
+            # Handle events
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.handle_quit()
@@ -391,9 +533,11 @@ class Client:
                         self.handle_button_click(event.pos)
 
             try:
+                # Draw the current game state
                 self.draw()
             except Exception as e:
-                print(f"Error drawing game state: {e}")
+                logger.error(f"Error drawing game state: {e}")
+                traceback.print_exc()
             self.clock.tick(60)
 
 
@@ -426,54 +570,58 @@ class Client:
                                     all_ready = all(is_ready for is_ready in data['ready_status'].values())
                                     self.buttons[0]['text'] = 'Start' if all_ready else 'Ready'
                             if data['status'] == GameStatus.IN_GAME.value:
-                                print(f'Receive IN_GAME Message: {data.keys()}')
-                                self.update_game_state(data['status'])
+                                logger.debug(f'Receive IN_GAME Message: {data.keys()}')
                                 # 保存游戏管理器状态
                                 if 'manager' in data and 'players' in data['manager']:
-                                    self.game_manager = data['manager']
-                                    players_data = data['manager']['players']
-                                    print(f'players_data: {players_data}')                                    
-                                    # First update the player order and resources
-                                    if 'players' in data:
-                                        # Reset all player slots first
-                                        self.players = {i: None for i in range(PLAYER_SLOTS)}
+                                    with self.game_state_lock:
+                                        self.game_manager = data['manager']
+                                        players_data = data['manager']['players']
+                                        logger.debug(f'players_data: {players_data}')
                                         
-                                        # Update player slots in the correct order
-                                        for i, player_name in enumerate(data['players']):
-                                            if i < PLAYER_SLOTS:
-                                                player_info = players_data.get(player_name, {})
-                                                if isinstance(player_info, dict):
-                                                    self.players[i] = {
-                                                        'name': player_name,
-                                                        'resources': player_info.get('resources', {}),
-                                                        'ready': True  # In game, all players are ready
-                                                    }
-                                    
-                                    # Then update current player's toolbar pieces
-                                    current_player_data = players_data.get(self.username, {})
-                                    if isinstance(current_player_data, dict) and 'puzzles' in current_player_data:
-                                        puzzles_data = current_player_data['puzzles']
-                                        self.toolbar_pieces = []
-                                        for puzzle_id, puzzle_info in puzzles_data.items():
-                                            piece = {
-                                                'id': puzzle_id,
-                                                'shape': self.get_shape_matrix(puzzle_info.get('shape', None)),
-                                                'terrain': puzzle_info.get('terrainType', None),
-                                                'building_id': puzzle_info.get('building_id', None),
-                                                'is_valid': True
-                                            }
-                                            self.toolbar_pieces.append(piece)
+                                        # First update the player order and resources
+                                        if 'players' in data:
+                                            # Reset all player slots first
+                                            self.players = {i: None for i in range(PLAYER_SLOTS)}
+                                            
+                                            # Update player slots in the correct order
+                                            for i, player_name in enumerate(data['players']):
+                                                if i < PLAYER_SLOTS:
+                                                    player_info = players_data.get(player_name, {})
+                                                    if isinstance(player_info, dict):
+                                                        self.players[i] = {
+                                                            'name': player_name,
+                                                            'resources': player_info.get('resources', {}),
+                                                            'ready': True  # In game, all players are ready
+                                                        }
+                                        
+                                        # Then update current player's toolbar pieces
+                                        current_player_data = players_data.get(self.username, {})
+                                        if isinstance(current_player_data, dict) and 'puzzles' in current_player_data:
+                                            puzzles_data = current_player_data['puzzles']
+                                            self.toolbar_pieces = []
+                                            for puzzle_id, puzzle_info in puzzles_data.items():
+                                                piece = {
+                                                    'id': puzzle_id,
+                                                    'shape': self.get_shape_matrix(puzzle_info.get('shape', None)),
+                                                    'terrain': puzzle_info.get('terrainType', None),
+                                                    'building_id': puzzle_info.get('building_id', None),
+                                                    'is_valid': True
+                                                }
+                                                self.toolbar_pieces.append(piece)
+                                        
+                                        # Finally update the game state
+                                        self.game_state = data['status']
                     except json.JSONDecodeError:
-                        print('Error decoding message:', message.body)
+                        logger.error('Error decoding message:', message.body)
                         traceback.print_exc()
                     except Exception as e:
-                        print('Error processing message:', str(e))
+                        logger.error('Error processing message:', str(e))
                         traceback.print_exc()
         except Exception as e:
-            print('Error in message listener:', str(e))
+            logger.error('Error in message listener:', str(e))
             traceback.print_exc()
         finally:
-            print('Message listener stopped')
+            logger.info('Message listener stopped')
 
     def update_players(self, users_data):
         """Update player slots with user data"""
@@ -505,7 +653,7 @@ class Client:
             if hasattr(self, 'message_thread') and self.message_thread.is_alive():
                 self.message_thread.join(timeout=1)
         except Exception as e:
-            print(f'Error during cleanup: {e}')
+            logger.error(f'Error during cleanup: {e}')
         finally:
             pygame.quit()
             sys.exit()
@@ -527,7 +675,7 @@ class Client:
             ))
             return response
         except Exception as e:
-            print(f'Error sending message: {e}')
+            logger.error(f'Error sending message: {e}')
             return None
 
 def main():
@@ -547,11 +695,11 @@ def main():
         client = Client(args.username, args.address, args.port)
         client.run()
     except KeyboardInterrupt:
-        print('\nReceived shutdown signal')
+        logger.info('\nReceived shutdown signal')
         if client:
             client.handle_quit()
     except Exception as e:
-        print(f'Error: {e}')
+        logger.error(f'Error: {e}')
         traceback.print_exc()
         if client:
             client.handle_quit()
@@ -560,6 +708,6 @@ if __name__ == '__main__':
     try:
         main()
     except KeyboardInterrupt:
-        print('\nReceived shutdown signal')
+        logger.info('\nReceived shutdown signal')
         if client:
             client.handle_quit()
