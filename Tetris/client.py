@@ -303,44 +303,10 @@ class Client:
                     logger.error(traceback.format_exc())
             else:
                 logger.debug("No game manager available")
-    
-    def run(self):
-        """Main game loop"""
-        logger.info("Starting game loop...")
-        self.running = True
         
-        try:
-            while self.running:
-                # Handle events
-                for event in pygame.event.get():
-                    logger.debug(f"Processing event: {event.type}")
-                    if event.type == pygame.QUIT:
-                        logger.info("Received quit event")
-                        self.running = False
-                        break
-                    # Handle other events here...
-                
-                try:
-                    # Draw game state
-                    self.draw()
-                    
-                    # Update display
-                    pygame.display.flip()
-                except Exception as e:
-                    logger.error(f"Error in game loop: {e}")
-                    logger.error(traceback.format_exc())
-                
-                # Control frame rate
-                self.clock.tick(60)
-        except Exception as e:
-            logger.error(f"Fatal error in game loop: {e}")
-            logger.error(traceback.format_exc())
-        finally:
-            logger.info("Game loop ended")
-            pygame.quit()
-    
     def draw(self):
         """Draw the game state"""
+        logger.debug("In Draw func")
         with self.game_state_lock:
             logger.debug("\n=== Drawing Game State ===")
             logger.debug(f"Game State: {self.game_state}")
@@ -369,36 +335,60 @@ class Client:
             
             # Draw toolbar pieces in IN_GAME state
             if self.game_state == GameStatus.IN_GAME.value:
-                logger.debug("Drawing toolbar pieces...")
-                if self.toolbar_pieces:
-                    logger.debug(f"Drawing {len(self.toolbar_pieces)} pieces in toolbar")
-                    # Calculate total width needed for all pieces
-                    total_width = 0
-                    piece_widths = []
-                    for piece in self.toolbar_pieces:
+                logger.debug("=== Drawing Toolbar Pieces ===")
+                # 预设5个固定的grid位置
+                max_pieces = 5
+                available_width = BLOCK_SIZE * GRID_WIDTH
+                piece_spacing = available_width // (max_pieces + 1)
+                
+                logger.debug(f"Toolbar dimensions: width={available_width}, spacing={piece_spacing}")
+                logger.debug(f"Current toolbar pieces: {len(self.toolbar_pieces) if self.toolbar_pieces else 0}")
+                
+                # 遍历所有可能的位置
+                for idx in range(max_pieces):
+                    # 计算grid的位置
+                    grid_x = piece_spacing * (idx + 1)
+                    grid_y = toolbar_y + TOOLBAR_HEIGHT // 4
+                    grid_size = TOOLBAR_HEIGHT // 2
+                    
+                    # 绘制grid边框
+                    grid_rect = pygame.Rect(grid_x - grid_size//2, grid_y, grid_size, grid_size)
+                    pygame.draw.rect(self.screen, BLACK, grid_rect, 1)
+                    
+                    # 如果有对应的piece则绘制
+                    if self.toolbar_pieces and idx < len(self.toolbar_pieces):
+                        piece = self.toolbar_pieces[idx]
                         if piece and 'shape' in piece and piece['shape']:
-                            width = len(piece['shape'][0]) * BLOCK_SIZE
-                            piece_widths.append(width)
-                            total_width += width
-                    
-                    # Calculate spacing between pieces
-                    spacing = (SCREEN_WIDTH - total_width) // (len(self.toolbar_pieces) + 1)
-                    
-                    # Draw each piece
-                    current_x = spacing
-                    for idx, (piece, width) in enumerate(zip(self.toolbar_pieces, piece_widths)):
-                        if not piece or 'shape' not in piece or not piece['shape']:
-                            logger.debug(f"Skipping piece {idx} - invalid shape")
-                            continue
+                            # 计算piece的尺寸
+                            piece_width = len(piece['shape'][0]) * BLOCK_SIZE
+                            piece_height = len(piece['shape']) * BLOCK_SIZE
                             
-                        # Center vertically in toolbar
-                        height = len(piece['shape']) * BLOCK_SIZE
-                        y = toolbar_y + (TOOLBAR_HEIGHT - height) // 2
-                        
-                        logger.debug(f"Drawing piece {idx} at ({current_x}, {y})")
-                        self.draw_piece(piece, current_x, y)
-                        current_x += width + spacing
-                else:
+                            # 在grid中居中
+                            x = grid_x - piece_width // 2
+                            y = grid_y + (grid_size - piece_height) // 2
+                            
+                            logger.debug(f"Drawing piece {idx}:")
+                            logger.debug(f"  - Position: ({x}, {y})")
+                            logger.debug(f"  - Dimensions: {piece_width}x{piece_height}")
+                            logger.debug(f"  - Shape: {piece['shape']}")
+                            logger.debug(f"  - Valid: {piece.get('is_valid', True)}")
+                            
+                            if piece.get('is_valid', True):
+                                self.draw_piece(piece, x, y)
+                            else:
+                                self.draw_piece(piece, x, y, alpha=128)
+                                
+                            # 在piece上方显示ID
+                            if 'id' in piece:
+                                id_text = self.font.render(f"ID: {piece['id']}", True, BLACK)
+                                id_rect = id_text.get_rect()
+                                id_rect.centerx = grid_x
+                                id_rect.bottom = grid_y - 5  # 在grid上方5像素显示
+                                self.screen.blit(id_text, id_rect)
+                        else:
+                            logger.debug(f"Piece {idx} is invalid or missing shape")
+                    else:
+                        logger.debug(f"No piece for grid {idx}")
                     logger.debug("No toolbar pieces to draw")
             
             # Draw buttons based on game state
@@ -495,59 +485,6 @@ class Client:
             text_rect = empty_text.get_rect(center=slot_rect.center)
             self.screen.blit(empty_text, text_rect)
 
-    def draw(self):
-        """Draw the game state"""
-        self.screen.fill(CREAM)
-        
-        # Draw game grid
-        for y in range(GRID_HEIGHT):
-            for x in range(GRID_WIDTH):
-                rect = pygame.Rect(
-                    x * BLOCK_SIZE,
-                    TOP_MARGIN + y * BLOCK_SIZE,
-                    BLOCK_SIZE - 1,
-                    BLOCK_SIZE - 1
-                )
-                pygame.draw.rect(self.screen, BLACK, rect, 1)
-        
-        # Draw game state if available
-        if self.game_state == GameStatus.IN_GAME.value:
-            with self.game_state_lock:
-                # 从服务器获取的游戏状态应该在manager中
-                if hasattr(self, 'game_manager'):
-                    try:
-                        desktop_data = json.loads(self.game_manager.get('Desktop', '[]'))
-                        for y, row in enumerate(desktop_data):
-                            for x, cell in enumerate(row):
-                                if cell and cell.get('owner'):
-                                    rect = pygame.Rect(
-                                        x * BLOCK_SIZE,
-                                        TOP_MARGIN + y * BLOCK_SIZE,
-                                        BLOCK_SIZE - 1,
-                                        BLOCK_SIZE - 1
-                                    )
-                                    pygame.draw.rect(self.screen, WHITE, rect)
-                                    if cell.get('building_id'):
-                                        text = self.font.render(str(cell['building_id']), True, BLACK)
-                                        text_rect = text.get_rect(center=rect.center)
-                                        self.screen.blit(text, text_rect)
-                    except json.JSONDecodeError as e:
-                        logger.error(f'Error decoding desktop data: {e}')
-        
-        # Draw player slots
-        for i in range(PLAYER_SLOTS):
-            self.draw_player_slot(i, self.players.get(i))
-        
-        # Draw buttons
-        for button in self.buttons:
-            pygame.draw.rect(self.screen, WHITE, button['rect'])
-            pygame.draw.rect(self.screen, BLACK, button['rect'], 1)
-            text = self.font.render(button['text'], True, BLACK)
-            text_rect = text.get_rect(center=button['rect'].center)
-            self.screen.blit(text, text_rect)
-        
-        pygame.display.flip()
-
     def handle_button_click(self, pos):
         """Handle button clicks"""
         for button in self.buttons:
@@ -583,7 +520,7 @@ class Client:
             with self.redraw_lock:
                 if self.needs_redraw:
                     try:
-                        logger.debug(f"Drawing game state: {self.game_state}")
+                        logger.debug(f"In run: Drawing game state: {self.game_state}")
                         self.draw()
                         pygame.display.flip()
                         self.needs_redraw = False
