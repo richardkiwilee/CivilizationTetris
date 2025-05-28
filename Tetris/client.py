@@ -260,12 +260,10 @@ class Client:
     
     def draw_game_board(self):
         """Draw the game grid and placed pieces"""
-        logger.debug("=== Drawing Game Board ===")
-        logger.debug(f"Game State: {self.game_state}")
-        
-        # Draw grid lines
+        # Draw grid lines and block group borders
         for y in range(GRID_HEIGHT):
             for x in range(GRID_WIDTH):
+                # Draw basic grid
                 rect = pygame.Rect(
                     x * BLOCK_SIZE,
                     TOP_MARGIN + y * BLOCK_SIZE,
@@ -273,7 +271,23 @@ class Client:
                     BLOCK_SIZE - 1
                 )
                 pygame.draw.rect(self.screen, BLACK, rect, 1)
-        
+                
+                # Draw block group borders only at the edges
+                if x % FILL_BLOCK == 0 and y % FILL_BLOCK == 0:
+                    # Calculate block group position
+                    start_x = x * BLOCK_SIZE
+                    start_y = y * BLOCK_SIZE + TOP_MARGIN
+                    width = FILL_BLOCK * BLOCK_SIZE
+                    height = FILL_BLOCK * BLOCK_SIZE
+                    
+                    if x < GRID_WIDTH - FILL_BLOCK + 1 and y < GRID_HEIGHT - FILL_BLOCK + 1:
+                        # Draw outer line
+                        pygame.draw.rect(self.screen, BLACK,
+                                       (start_x, start_y, width, height), 2)
+                        # Draw inner line
+                        pygame.draw.rect(self.screen, BLACK,
+                                       (start_x + 2, start_y + 2, width - 4, height - 4), 1)
+
         # Draw placed pieces if in game
         if self.game_state == GameStatus.IN_GAME.value:
             logger.debug("Game is IN_GAME state")
@@ -392,7 +406,24 @@ class Client:
                     logger.debug("No toolbar pieces to draw")
             
             # Draw buttons based on game state
-            if self.game_state != GameStatus.IN_GAME.value:
+            if self.game_state == GameStatus.IN_GAME.value:
+                # Draw EndTurn button in game
+                button_x = SCREEN_WIDTH - BUTTON_WIDTH - BUTTON_MARGIN
+                button_y = SCREEN_HEIGHT - BUTTON_HEIGHT - BUTTON_MARGIN
+                end_turn_button = {
+                    'text': 'EndTurn',
+                    'rect': pygame.Rect(button_x, button_y, BUTTON_WIDTH, BUTTON_HEIGHT)
+                }
+                
+                pygame.draw.rect(self.screen, WHITE, end_turn_button['rect'])
+                pygame.draw.rect(self.screen, BLACK, end_turn_button['rect'], 1)
+                text = self.font.render(end_turn_button['text'], True, BLACK)
+                text_rect = text.get_rect(center=end_turn_button['rect'].center)
+                self.screen.blit(text, text_rect)
+                
+                # Update buttons list for click handling
+                self.buttons = [end_turn_button]
+            else:
                 # Draw Ready/Start button in lobby
                 for button in self.buttons:
                     pygame.draw.rect(self.screen, WHITE, button['rect'])
