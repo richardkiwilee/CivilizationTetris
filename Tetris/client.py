@@ -373,14 +373,9 @@ class Client:
                 
                 # 遍历所有可能的位置
                 for idx in range(max_pieces):
-                    # 计算grid的位置
-                    grid_x = piece_spacing * (idx + 1)
-                    grid_y = toolbar_y + TOOLBAR_HEIGHT // 4
-                    grid_size = TOOLBAR_HEIGHT // 2
-                    
-                    # 绘制grid边框
-                    grid_rect = pygame.Rect(grid_x - grid_size//2, grid_y, grid_size, grid_size)
-                    pygame.draw.rect(self.screen, BLACK, grid_rect, 1)
+                    # 计算图标的位置
+                    grid_x = piece_spacing * (idx + 1) - BLOCK_SIZE // 2  # 居中显示
+                    grid_y = toolbar_y + (TOOLBAR_HEIGHT - BLOCK_SIZE) // 2  # 垂直居中
                     
                     # 如果有对应的piece则绘制
                     if self.toolbar_pieces and idx < len(self.toolbar_pieces):
@@ -392,7 +387,7 @@ class Client:
                             
                             # 在grid中居中
                             x = grid_x - piece_width // 2
-                            y = grid_y + (grid_size - piece_height) // 2
+                            y = grid_y + (TOOLBAR_HEIGHT - piece_height) // 2
                             
                             logger.debug(f"Drawing piece {idx}:")
                             logger.debug(f"  - Position: ({x}, {y})")
@@ -401,19 +396,9 @@ class Client:
                             logger.debug(f"  - Valid: {piece.get('is_valid', True)}")
                             
                             if piece.get('is_valid', True):
-                                self.draw_piece(piece, x, y)
+                                self.draw_piece(piece, grid_x, grid_y)
                             else:
-                                self.draw_piece(piece, x, y, alpha=128)
-                                
-                            # 在piece上方显示ID
-                            if 'id' in piece:
-                                id_text = self.font.render(f"ID: {piece['id']}", True, BLACK)
-                                id_rect = id_text.get_rect()
-                                id_rect.centerx = grid_x
-                                id_rect.bottom = grid_y - 5  # 在grid上方5像素显示
-                                self.screen.blit(id_text, id_rect)
-                        else:
-                            logger.debug(f"Piece {idx} is invalid or missing shape")
+                                self.draw_piece(piece, grid_x, grid_y, alpha=128)
                     else:
                         logger.debug(f"No piece for grid {idx}")
                     logger.debug("No toolbar pieces to draw")
