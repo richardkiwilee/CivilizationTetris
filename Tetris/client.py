@@ -718,8 +718,10 @@ def main():
                                     logger.info(f"Button clicked: {button['text']}")
                                     if button['text'] == 'Ready':
                                         client.sendMessage(PlayerAction.Ready.value, client.username, None, None, None, None)
+                                        logger.info(f"Sent Ready message for {client.username}")
                                     elif button['text'] == 'Start':
-                                        client.sendMessage(PlayerAction.Start.value, client.username, None, None, None, None)
+                                        client.sendMessage(PlayerAction.StartGame.value, client.username, None, None, None, None)
+                                        logger.info(f"Sent StartGame message for {client.username}")
                 
                 # Draw the current game state
                 client.draw()
