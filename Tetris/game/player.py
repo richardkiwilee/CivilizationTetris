@@ -18,7 +18,7 @@ class Player:
     def __init__(self):
         self.name = None
         self.resources = {
-            PlayerResource.Gold.value: 100,
+            PlayerResource.Gold.value: 0,
             PlayerResource.Food.value: 100,
             PlayerResource.Wood.value: 100,
             PlayerResource.Stone.value: 0,

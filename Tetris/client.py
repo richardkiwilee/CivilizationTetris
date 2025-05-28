@@ -260,23 +260,22 @@ class Client:
             name_text = name_font.render(name, True, BLACK)
             self.screen.blit(name_text, (x + 5, y + 5))
             
-            # Set up resources
-            resources = {'food': 0, 'wood': 0, 'stone': 0, 'gold': 0, 'faith': 0, 'citizen': 0, 'order': 0}
-            resources.update(player_data.get('resources', {}))
+            # Get resources from player data
+            resources = player_data.get('resources', {})
             
             resource_font = pygame.font.Font(None, 20)
             # 资源类型对应关系，从枚举值映射到资源名称
             resource_mapping = {
-                1: 'food',   # PlayerResource.Food.value
-                2: 'wood',   # PlayerResource.Wood.value
-                3: 'stone',  # PlayerResource.Stone.value
-                0: 'gold',   # PlayerResource.Gold.value
-                6: 'faith',  # PlayerResource.Faith.value
-                8: 'citizen',# PlayerResource.Citizen.value
-                7: 'order'   # PlayerResource.Decree.value
+                '1': 'food',   # PlayerResource.Food.value
+                '2': 'wood',   # PlayerResource.Wood.value
+                '3': 'stone',  # PlayerResource.Stone.value
+                '0': 'gold',   # PlayerResource.Gold.value
+                '6': 'faith',  # PlayerResource.Faith.value
+                '8': 'citizen',# PlayerResource.Citizen.value
+                '7': 'order'   # PlayerResource.Decree.value
             }
-            left_resources = [1, 2, 3]  # Food, Wood, Stone
-            right_resources = [0, 6, 8, 7]  # Gold, Faith, Citizen, Order
+            left_resources = ['1', '2', '3']  # Food, Wood, Stone
+            right_resources = ['0', '6', '8', '7']  # Gold, Faith, Citizen, Order
             
             # Left column resources
             for i, resource_id in enumerate(left_resources):
@@ -284,7 +283,7 @@ class Client:
                 resource_name = resource_mapping.get(resource_id)
                 if resource_name and self.resource_images.get(resource_name):
                     self.screen.blit(self.resource_images[resource_name], (x + 5, icon_y))
-                value_text = resource_font.render(str(resources.get(resource_id, 0)), True, BLACK)
+                value_text = resource_font.render(str(resources.get(resource_id, '0')), True, BLACK)
                 self.screen.blit(value_text, (x + RESOURCE_ICON_SIZE + 10, icon_y + 2))
             
             # Right column resources
@@ -293,7 +292,7 @@ class Client:
                 resource_name = resource_mapping.get(resource_id)
                 if resource_name and self.resource_images.get(resource_name):
                     self.screen.blit(self.resource_images[resource_name], (x + PLAYER_SLOT_WIDTH//2, icon_y))
-                value_text = resource_font.render(str(resources.get(resource_id, 0)), True, BLACK)
+                value_text = resource_font.render(str(resources.get(resource_id, '0')), True, BLACK)
                 self.screen.blit(value_text, (x + PLAYER_SLOT_WIDTH//2 + RESOURCE_ICON_SIZE + 5, icon_y + 2))
             
             # Draw special effects slots
@@ -427,56 +426,43 @@ class Client:
                                     all_ready = all(is_ready for is_ready in data['ready_status'].values())
                                     self.buttons[0]['text'] = 'Start' if all_ready else 'Ready'
                             if data['status'] == GameStatus.IN_GAME.value:
-                                # 更新游戏状态
-                                # data['manager']['players']
-                                # {'Player_298': {'name': 'Player_298', 'resources': {'0': 100, '1': 100, '2': 100, '3': 0, '6': 0, '7': 0, '8': 0}, 
-                                # 'puzzles': {
-                                # '623': {'puzzle_id': 623, 'terrainType': 8, 'shape': 'Corner', 'building_id': 62}, 
-                                # '663': {'puzzle_id': 663, 'terrainType': 8, 'shape': 'Corner', 'building_id': 66}, 
-                                # '666': {'puzzle_id': 666, 'terrainType': 8, 'shape': 'Corner', 'building_id': 66}, 
-                                # '239': {'puzzle_id': 239, 'terrainType': 8, 'shape': 'O', 'building_id': 23}, 
-                                # '345': {'puzzle_id': 345, 'terrainType': 8, 'shape': 'Corner', 'building_id': 34}}}
-                                # }
                                 print(f'Receive IN_GAME Message: {data.keys()}')
-                                for _player in data['manager']['players']:
-                                    print(f'Player: {_player}')
-                                    for _puzzle, _puzzle_info in data['manager']['players'][_player]['puzzles'].items():
-                                        print(_puzzle, _puzzle_info)
                                 self.update_game_state(data['status'])
                                 # 保存游戏管理器状态
-                                if 'manager' in data:
+                                if 'manager' in data and 'players' in data['manager']:
                                     self.game_manager = data['manager']
-                                    # 获取当前玩家的拼图块
-                                    if 'players' in data['manager']:
-                                        current_player_data = data['manager']['players'].get(self.username, {})
-                                        if isinstance(current_player_data, dict) and 'puzzles' in current_player_data:
-                                            puzzles_data = current_player_data['puzzles']
-                                            self.toolbar_pieces = []
-                                            for puzzle_id, puzzle_info in puzzles_data.items():
-                                                # Convert puzzle info to the format expected by draw_piece
-                                                piece = {
-                                                    'id': puzzle_id,
-                                                    'shape': self.get_shape_matrix(puzzle_info.get('shape', None)),
-                                                    'terrain': puzzle_info.get('terrainType', None),
-                                                    'building_id': puzzle_info.get('building_id', None),
-                                                    'is_valid': True
-                                                }
-                                                self.toolbar_pieces.append(piece)
-                                # 更新玩家顺序
-                                if 'players' in data:
-                                    for i, player_name in enumerate(data['players']):
-                                        if i < PLAYER_SLOTS:
-                                            # 从管理器中获取玩家资源
-                                            player_resources = {}
-                                            if 'manager' in data and 'players' in data['manager']:
-                                                player_data = data['manager']['players'].get(player_name, {})
-                                                if isinstance(player_data, dict) and 'resources' in player_data:
-                                                    player_resources = player_data['resources']
-                                            self.players[i] = {
-                                                'name': player_name,
-                                                'resources': player_resources,
-                                                'ready': True  # 游戏中所有玩家都是就绪状态
+                                    players_data = data['manager']['players']
+                                    print(f'players_data: {players_data}')                                    
+                                    # First update the player order and resources
+                                    if 'players' in data:
+                                        # Reset all player slots first
+                                        self.players = {i: None for i in range(PLAYER_SLOTS)}
+                                        
+                                        # Update player slots in the correct order
+                                        for i, player_name in enumerate(data['players']):
+                                            if i < PLAYER_SLOTS:
+                                                player_info = players_data.get(player_name, {})
+                                                if isinstance(player_info, dict):
+                                                    self.players[i] = {
+                                                        'name': player_name,
+                                                        'resources': player_info.get('resources', {}),
+                                                        'ready': True  # In game, all players are ready
+                                                    }
+                                    
+                                    # Then update current player's toolbar pieces
+                                    current_player_data = players_data.get(self.username, {})
+                                    if isinstance(current_player_data, dict) and 'puzzles' in current_player_data:
+                                        puzzles_data = current_player_data['puzzles']
+                                        self.toolbar_pieces = []
+                                        for puzzle_id, puzzle_info in puzzles_data.items():
+                                            piece = {
+                                                'id': puzzle_id,
+                                                'shape': self.get_shape_matrix(puzzle_info.get('shape', None)),
+                                                'terrain': puzzle_info.get('terrainType', None),
+                                                'building_id': puzzle_info.get('building_id', None),
+                                                'is_valid': True
                                             }
+                                            self.toolbar_pieces.append(piece)
                     except json.JSONDecodeError:
                         print('Error decoding message:', message.body)
                         traceback.print_exc()
