@@ -208,15 +208,16 @@ class Client:
                 self.draw_player_slot(i, self.players[i])
             else:
                 self.draw_player_slot(i, None)
-        
+        print(f'game_state: {self.game_state}')
         # Handle different game states
         if self.game_state == GameStatus.IN_GAME.value:
-            print(self.toolbar_pieces)
+            print('toolbar_pieces: ', self.toolbar_pieces)
             # Draw toolbar pieces in the left side
             available_width = BLOCK_SIZE * GRID_WIDTH
             if self.toolbar_pieces:
                 piece_spacing = available_width // (len(self.toolbar_pieces) + 1)
                 for idx, piece in enumerate(self.toolbar_pieces):
+                    print(f'idx: {idx}, piece: {piece}')
                     x = piece_spacing * (idx + 1) - (len(piece['shape'][0]) * BLOCK_SIZE) // 2
                     y = toolbar_y + (TOOLBAR_HEIGHT - len(piece['shape']) * BLOCK_SIZE) // 2
                     
@@ -436,6 +437,11 @@ class Client:
                                 # '239': {'puzzle_id': 239, 'terrainType': 8, 'shape': 'O', 'building_id': 23}, 
                                 # '345': {'puzzle_id': 345, 'terrainType': 8, 'shape': 'Corner', 'building_id': 34}}}
                                 # }
+                                print(f'Receive IN_GAME Message: {data.keys()}')
+                                for _player in data['manager']['players']:
+                                    print(f'Player: {_player}')
+                                    for _puzzle, _puzzle_info in data['manager']['players'][_player]['puzzles'].items():
+                                        print(_puzzle, _puzzle_info)
                                 self.update_game_state(data['status'])
                                 # 保存游戏管理器状态
                                 if 'manager' in data:
@@ -450,9 +456,9 @@ class Client:
                                                 # Convert puzzle info to the format expected by draw_piece
                                                 piece = {
                                                     'id': puzzle_id,
-                                                    'shape': self.get_shape_matrix(puzzle_info['shape']),
-                                                    'terrain': puzzle_info['terrainType'],
-                                                    'building_id': puzzle_info['building_id'],
+                                                    'shape': self.get_shape_matrix(puzzle_info.get('shape', None)),
+                                                    'terrain': puzzle_info.get('terrainType', None),
+                                                    'building_id': puzzle_info.get('building_id', None),
                                                     'is_valid': True
                                                 }
                                                 self.toolbar_pieces.append(piece)
@@ -471,12 +477,12 @@ class Client:
                                                 'resources': player_resources,
                                                 'ready': True  # 游戏中所有玩家都是就绪状态
                                             }
-                                # 仅显示自己的手牌
-                                self.draw()
                     except json.JSONDecodeError:
                         print('Error decoding message:', message.body)
+                        traceback.print_exc()
                     except Exception as e:
                         print('Error processing message:', str(e))
+                        traceback.print_exc()
         except Exception as e:
             print('Error in message listener:', str(e))
             traceback.print_exc()
