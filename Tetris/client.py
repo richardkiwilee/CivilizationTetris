@@ -32,7 +32,13 @@ logger.addHandler(console_handler)
 # Initialize Pygame
 pygame.init()
 pygame.font.init()
+
 logger.info("Pygame initialized")
+# Colors
+BLACK = (0, 0, 0)
+WHITE = (255, 255, 255)
+CREAM = (255, 253, 208)
+
 # Game Constants
 BLOCK_SIZE = 30
 FILL_BLOCK = 7  # 定义 FILL_BLOCK * FILL_BLOCK是一个正方形的小分组
@@ -48,7 +54,12 @@ PLAYER_SLOT_HEIGHT = 180  # Height of each player slot
 PLAYER_SLOT_WIDTH = 200  # Width of player slots area
 RESOURCE_ICON_SIZE = 20  # Size of resource icons
 EFFECT_SLOT_SIZE = 40  # Size of special effect slots
-BUTTON_HEIGHT = 40
+BUTTON_WIDTH = 100  # Width of buttons
+BUTTON_HEIGHT = 40  # Height of buttons
+
+# Screen dimensions
+SCREEN_WIDTH = BLOCK_SIZE * GRID_WIDTH + PLAYER_SLOT_WIDTH
+SCREEN_HEIGHT = max(BLOCK_SIZE * GRID_HEIGHT + TOP_MARGIN, PLAYER_SLOTS * PLAYER_SLOT_HEIGHT) + TOOLBAR_HEIGHT
 BUTTON_WIDTH = 120
 BUTTON_MARGIN = 10
 
@@ -101,6 +112,8 @@ class Client:
         self.state_callback = None  # Callback for game state updates
         self.players = {}
         self.toolbar_pieces = []
+        self.needs_redraw = False
+        self.redraw_lock = threading.Lock()
         
         # Button setup
         button_x = BLOCK_SIZE * GRID_WIDTH + (PLAYER_SLOT_WIDTH - BUTTON_WIDTH) // 2
@@ -163,6 +176,11 @@ class Client:
 
     def get_shape_matrix(self, shape_name):
         """Convert shape name to shape matrix"""
+        if not shape_name:
+            logger.error("Shape name is None or empty")
+            return [[1]]  # Default single block
+            
+        logger.debug(f"Converting shape: {shape_name}")
         if shape_name == 'Corner':
             return [
                 [1, 1],
@@ -187,6 +205,10 @@ class Client:
             ]
         elif shape_name == 'Cell':
             return [[1]]  # Single cell
+        elif shape_name == 'Two':
+            return [[1, 1]]  # Two cells in a row
+        
+        logger.warning(f"Unknown shape: {shape_name}, using default")
         return [[1]]  # Default single block
     
     def get_terrain_color(self, terrain_type):
@@ -200,38 +222,41 @@ class Client:
     def draw_piece(self, piece, x, y, alpha=255):
         """Draw a puzzle piece at the specified position"""
         if not piece or 'shape' not in piece:
+            logger.error("Invalid piece or missing shape")
             return
             
         shape = piece['shape']
-        color = self.get_terrain_color(piece.get('terrain', 0))
-        
-        # Create a surface for the piece with alpha channel
-        piece_width = len(shape[0]) * BLOCK_SIZE
-        piece_height = len(shape) * BLOCK_SIZE
-        piece_surface = pygame.Surface((piece_width, piece_height), pygame.SRCALPHA)
+        if not shape:
+            logger.error("Empty shape matrix")
+            return
+            
+        logger.debug(f"Drawing piece at ({x}, {y}): {piece}")
         
         # Draw each block of the piece
         for row_idx, row in enumerate(shape):
             for col_idx, cell in enumerate(row):
                 if cell:
+                    block_x = x + col_idx * BLOCK_SIZE
+                    block_y = y + row_idx * BLOCK_SIZE
+                    
+                    # Draw block background
                     block_rect = pygame.Rect(
-                        col_idx * BLOCK_SIZE,
-                        row_idx * BLOCK_SIZE,
+                        block_x,
+                        block_y,
                         BLOCK_SIZE - 1,
                         BLOCK_SIZE - 1
                     )
-                    # Apply alpha to the color
-                    block_color = (*color, alpha)
-                    pygame.draw.rect(piece_surface, block_color, block_rect)
+                    
+                    # Use color based on terrain type
+                    color = self.get_terrain_color(piece.get('terrain', 0))
+                    pygame.draw.rect(self.screen, color, block_rect)
+                    pygame.draw.rect(self.screen, BLACK, block_rect, 1)
                     
                     # Draw building ID if present
                     if piece.get('building_id'):
-                        text = self.font.render(str(piece['building_id']), True, (0, 0, 0, alpha))
+                        text = self.font.render(str(piece['building_id']), True, BLACK)
                         text_rect = text.get_rect(center=block_rect.center)
-                        piece_surface.blit(text, text_rect)
-                    
-        # Draw the piece surface on the screen
-        self.screen.blit(piece_surface, (x, y))
+                        self.screen.blit(text, text_rect)
     
     def draw_game_board(self):
         """Draw the game grid and placed pieces"""
@@ -316,7 +341,6 @@ class Client:
     
     def draw(self):
         """Draw the game state"""
-        logger.debug("Drawing game state...")
         with self.game_state_lock:
             logger.debug("\n=== Drawing Game State ===")
             logger.debug(f"Game State: {self.game_state}")
@@ -341,29 +365,41 @@ class Client:
             # Draw toolbar at the bottom
             toolbar_y = SCREEN_HEIGHT - TOOLBAR_HEIGHT
             pygame.draw.rect(self.screen, WHITE, (0, toolbar_y, SCREEN_WIDTH, TOOLBAR_HEIGHT))
+            pygame.draw.line(self.screen, BLACK, (0, toolbar_y), (SCREEN_WIDTH, toolbar_y))
             
             # Draw toolbar pieces in IN_GAME state
             if self.game_state == GameStatus.IN_GAME.value:
                 logger.debug("Drawing toolbar pieces...")
-                available_width = SCREEN_WIDTH
                 if self.toolbar_pieces:
-                    piece_spacing = available_width // (len(self.toolbar_pieces) + 1)
-                    for idx, piece in enumerate(self.toolbar_pieces):
-                        logger.debug(f"Piece {idx}: {piece}")
-                        if 'shape' not in piece or not piece['shape']:
+                    logger.debug(f"Drawing {len(self.toolbar_pieces)} pieces in toolbar")
+                    # Calculate total width needed for all pieces
+                    total_width = 0
+                    piece_widths = []
+                    for piece in self.toolbar_pieces:
+                        if piece and 'shape' in piece and piece['shape']:
+                            width = len(piece['shape'][0]) * BLOCK_SIZE
+                            piece_widths.append(width)
+                            total_width += width
+                    
+                    # Calculate spacing between pieces
+                    spacing = (SCREEN_WIDTH - total_width) // (len(self.toolbar_pieces) + 1)
+                    
+                    # Draw each piece
+                    current_x = spacing
+                    for idx, (piece, width) in enumerate(zip(self.toolbar_pieces, piece_widths)):
+                        if not piece or 'shape' not in piece or not piece['shape']:
                             logger.debug(f"Skipping piece {idx} - invalid shape")
                             continue
+                            
+                        # Center vertically in toolbar
+                        height = len(piece['shape']) * BLOCK_SIZE
+                        y = toolbar_y + (TOOLBAR_HEIGHT - height) // 2
                         
-                        # Center the pieces in the toolbar
-                        x = piece_spacing * (idx + 1) - (len(piece['shape'][0]) * BLOCK_SIZE) // 2
-                        y = toolbar_y + (TOOLBAR_HEIGHT - len(piece['shape']) * BLOCK_SIZE) // 2
-                        
-                        if piece.get('is_valid', True):
-                            self.draw_piece(piece, x, y)
-                        else:
-                            self.draw_piece(piece, x, y, alpha=128)
+                        logger.debug(f"Drawing piece {idx} at ({current_x}, {y})")
+                        self.draw_piece(piece, current_x, y)
+                        current_x += width + spacing
                 else:
-                    logger.error("No toolbar pieces to draw")
+                    logger.debug("No toolbar pieces to draw")
             
             # Draw buttons based on game state
             if self.game_state != GameStatus.IN_GAME.value:
@@ -520,10 +556,15 @@ class Client:
                     self.sendMessage(PlayerAction.Ready.value, self.username)
                 elif button['text'] == 'Start':
                     self.sendMessage(PlayerAction.StartGame.value, self.username)
+                elif button['text'] == 'EndTurn':
+                    self.sendMessage(PlayerAction.EndTurn.value, self.username)
                 break
 
     def run(self):
         """Main game loop"""
+        logger.info("Starting game loop...")
+        self.needs_redraw = True  # Force initial draw
+        
         while self.running:
             # Handle events
             for event in pygame.event.get():
@@ -535,13 +576,22 @@ class Client:
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     if event.button == 1:  # Left click
                         self.handle_button_click(event.pos)
+                        with self.redraw_lock:
+                            self.needs_redraw = True
 
-            try:
-                # Draw the current game state
-                self.draw()
-            except Exception as e:
-                logger.error(f"Error drawing game state: {e}")
-                traceback.print_exc()
+            # Draw if needed
+            with self.redraw_lock:
+                if self.needs_redraw:
+                    try:
+                        logger.debug(f"Drawing game state: {self.game_state}")
+                        self.draw()
+                        pygame.display.flip()
+                        self.needs_redraw = False
+                    except Exception as e:
+                        logger.error(f"Error drawing game state: {e}")
+                        logger.error(traceback.format_exc())
+
+            # Control frame rate
             self.clock.tick(60)
 
 
@@ -569,6 +619,7 @@ class Client:
                                             'ready': is_ready
                                         }
                                 # Update button text for host (first player)
+                                # Update button text based on game state
                                 if self.username == list(data['ready_status'].keys())[0]:
                                     # Check if all players are ready
                                     all_ready = all(is_ready for is_ready in data['ready_status'].values())
@@ -598,6 +649,10 @@ class Client:
                                                             'ready': True  # In game, all players are ready
                                                         }
                                         
+                                        # Update the game state first
+                                        self.game_state = data['status']
+                                        logger.info(f"Game state updated to: {self.game_state}")
+                                        
                                         # Then update current player's toolbar pieces
                                         current_player_data = players_data.get(self.username, {})
                                         if isinstance(current_player_data, dict) and 'puzzles' in current_player_data:
@@ -613,10 +668,16 @@ class Client:
                                                 }
                                                 self.toolbar_pieces.append(piece)
                                             logger.debug(f"Updated toolbar pieces: {len(self.toolbar_pieces)} pieces")
+                                            for piece in self.toolbar_pieces:
+                                                logger.debug(f"Piece: {piece}")
                                         
-                                        # Finally update the game state
-                                        self.game_state = data['status']
-                                        logger.info(f"Game state updated to: {self.game_state}")
+                                        # Update button text based on game state
+                                        self.buttons[0]['text'] = 'EndTurn'
+                                        
+                                        # Set redraw flag
+                                        with self.redraw_lock:
+                                            self.needs_redraw = True
+                                            logger.debug("Set needs_redraw to True")
                     except json.JSONDecodeError:
                         logger.error('Error decoding message:', message.body)
                         traceback.print_exc()
@@ -701,47 +762,9 @@ def main():
         logger.info("Creating client...")
         client = Client(args.username, args.address, args.port)
         logger.info("Client created, starting game loop...")
-        while True:
-            try:
-                # Handle events
-                for event in pygame.event.get():
-                    if event.type == pygame.QUIT:
-                        logger.info("Received quit event")
-                        return
-                    elif event.type == pygame.MOUSEBUTTONDOWN:
-                        # 获取鼠标点击位置
-                        mouse_pos = pygame.mouse.get_pos()
-                        logger.debug(f"Mouse clicked at: {mouse_pos}")
-                        
-                        # 检查按钮点击
-                        if client.game_state != GameStatus.IN_GAME.value:
-                            for button in client.buttons:
-                                if button['rect'].collidepoint(mouse_pos):
-                                    logger.info(f"Button clicked: {button['text']}")
-                                    if button['text'] == 'Ready':
-                                        client.sendMessage(PlayerAction.Ready.value, client.username, None, None, None, None)
-                                        logger.info(f"Sent Ready message for {client.username}")
-                                    elif button['text'] == 'Start':
-                                        client.sendMessage(PlayerAction.StartGame.value, client.username, None, None, None, None)
-                                        logger.info(f"Sent StartGame message for {client.username}")
-                
-                # Draw the current game state
-                client.draw()
-                
-                # Update display
-                pygame.display.flip()
-                
-                # Control frame rate
-                client.clock.tick(60)
-                
-            except Exception as e:
-                logger.error(f"Error in game loop: {e}")
-                logger.error(traceback.format_exc())
-                
-    except KeyboardInterrupt:
-        logger.info('\nReceived shutdown signal')
+        client.run()
     except Exception as e:
-        logger.error(f'Error: {e}')
+        logger.error(f"Fatal error: {e}")
         logger.error(traceback.format_exc())
     finally:
         if client:
