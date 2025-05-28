@@ -13,6 +13,7 @@ import Tetris.protocol.service_pb2_grpc as rpc
 from enum import Enum
 
 from Tetris.server import GameStatus
+from Tetris.game.terrain import Terrain
 
 # 配置日志记录器
 logger = logging.getLogger('CivilizationTetris')
@@ -103,7 +104,8 @@ class Client:
         
         # Load resources
         self.resource_images = self.load_resource_images()
-        logger.info("Resources loaded")
+        self.terrain_images = self.load_terrain_images()
+        logger.info("Resources and terrains loaded")
         
         # Game state
         self.running = True
@@ -211,13 +213,29 @@ class Client:
         logger.warning(f"Unknown shape: {shape_name}, using default")
         return [[1]]  # Default single block
     
-    def get_terrain_color(self, terrain_type):
-        """Get color based on terrain type"""
-        colors = {
-            8: (100, 200, 100),  # Example color for terrain type 8
-            # Add more terrain colors as needed
+    def load_terrain_images(self):
+        """Load and scale terrain icons"""
+        terrains = {
+            Terrain.Mountain.value: 'icon_mountain.png',    # 山地
+            Terrain.Forest.value: 'icon_forest.png',     # 森林
+            Terrain.Plain.value: 'icon_plain.png',  # 平原
+            Terrain.Farmland.value: 'icon_field.png',     # 农田
+            Terrain.Urban.value: 'icon_neighborhood.png', # 社区
+            Terrain.River.value: 'icon_river.png',      # 河流
+            Terrain.Barren.value: 'icon_barren.png',       # 贫瘠
+            Terrain.Building.value: 'icon_building.png' # 建筑
         }
-        return colors.get(terrain_type, (100, 100, 100))  # Default gray
+        
+        images = {}
+        for terrain_id, image_name in terrains.items():
+            try:
+                img = pygame.image.load(f'Asset/Icons/TerrainsTypes/{image_name}')
+                img = pygame.transform.scale(img, (BLOCK_SIZE - 2, BLOCK_SIZE - 2))  # 留出1像素边框
+                images[terrain_id] = img
+            except pygame.error as e:
+                logger.error(f'Warning: Could not load terrain image {image_name}: {e}')
+                images[terrain_id] = None
+        return images
     
     def draw_piece(self, piece, x, y, alpha=255):
         """Draw a puzzle piece at the specified position"""
@@ -230,33 +248,28 @@ class Client:
             logger.error("Empty shape matrix")
             return
             
-        logger.debug(f"Drawing piece at ({x}, {y}): {piece}")
-        
         # Draw each block of the piece
-        for row_idx, row in enumerate(shape):
-            for col_idx, cell in enumerate(row):
+        for i, row in enumerate(shape):
+            for j, cell in enumerate(row):
                 if cell:
-                    block_x = x + col_idx * BLOCK_SIZE
-                    block_y = y + row_idx * BLOCK_SIZE
+                    # Draw terrain image or fallback to gray rectangle
+                    terrain_type = piece.get('terrain', 0)
+                    terrain_image = self.terrain_images.get(terrain_type)
                     
-                    # Draw block background
-                    block_rect = pygame.Rect(
-                        block_x,
-                        block_y,
-                        BLOCK_SIZE - 1,
-                        BLOCK_SIZE - 1
-                    )
-                    
-                    # Use color based on terrain type
-                    color = self.get_terrain_color(piece.get('terrain', 0))
-                    pygame.draw.rect(self.screen, color, block_rect)
-                    pygame.draw.rect(self.screen, BLACK, block_rect, 1)
+                    if terrain_image is not None:
+                        surface = terrain_image.copy()
+                        surface.set_alpha(alpha)
+                        self.screen.blit(surface, (x + j * BLOCK_SIZE, y + i * BLOCK_SIZE))
+                    else:
+                        pygame.draw.rect(self.screen, (128, 128, 128),
+                                       [x + j * BLOCK_SIZE, y + i * BLOCK_SIZE, BLOCK_SIZE - 1, BLOCK_SIZE - 1])
                     
                     # Draw building ID if present
-                    if piece.get('building_id'):
-                        text = self.font.render(str(piece['building_id']), True, BLACK)
-                        text_rect = text.get_rect(center=block_rect.center)
-                        self.screen.blit(text, text_rect)
+                    # if piece.get('building_id'):
+                    #     block_rect = pygame.Rect(x + j * BLOCK_SIZE, y + i * BLOCK_SIZE, BLOCK_SIZE - 1, BLOCK_SIZE - 1)
+                    #     text = self.font.render(str(piece['building_id']), True, BLACK)
+                    #     text_rect = text.get_rect(center=block_rect.center)
+                    #     self.screen.blit(text, text_rect)
     
     def draw_game_board(self):
         """Draw the game grid and placed pieces"""
@@ -295,7 +308,7 @@ class Client:
                 logger.debug("Game manager exists")
                 try:
                     desktop_data = json.loads(self.game_manager.get('Desktop', '[]'))
-                    logger.debug(f"Desktop data: {desktop_data}")
+                    # logger.debug(f"Desktop data: {desktop_data}")
                     for y, row in enumerate(desktop_data):
                         for x, cell in enumerate(row):
                             if cell and cell.get('owner'):
