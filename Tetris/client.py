@@ -612,9 +612,11 @@ class Client:
                                                     'is_valid': True
                                                 }
                                                 self.toolbar_pieces.append(piece)
+                                            logger.debug(f"Updated toolbar pieces: {len(self.toolbar_pieces)} pieces")
                                         
                                         # Finally update the game state
                                         self.game_state = data['status']
+                                        logger.info(f"Game state updated to: {self.game_state}")
                     except json.JSONDecodeError:
                         logger.error('Error decoding message:', message.body)
                         traceback.print_exc()
