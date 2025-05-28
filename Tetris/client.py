@@ -89,7 +89,12 @@ class Client:
         
         # Initialize empty player slots
         self.players = {i: None for i in range(PLAYER_SLOTS)}
-
+        
+        # Initialize toolbar pieces
+        self.toolbar_pieces = []
+        self.selected_piece = None
+        self.mouse_pos = (0, 0)
+        
         # Login to server
         loginResp = self.sendMessage(PlayerAction.Login.value, self.username, None, None, None, None)
         if not loginResp:
@@ -134,15 +139,86 @@ class Client:
                 images[resource_name] = None
         return images
 
+    def draw_piece(self, piece, x, y, alpha=255):
+        """Draw a puzzle piece at the specified position"""
+        if not piece or 'shape' not in piece:
+            return
+            
+        shape = piece['shape']
+        color = piece.get('color', (100, 100, 100))  # Default gray if no color specified
+        
+        # Create a surface for the piece with alpha channel
+        piece_width = len(shape[0]) * BLOCK_SIZE
+        piece_height = len(shape) * BLOCK_SIZE
+        piece_surface = pygame.Surface((piece_width, piece_height), pygame.SRCALPHA)
+        
+        # Draw each block of the piece
+        for row_idx, row in enumerate(shape):
+            for col_idx, cell in enumerate(row):
+                if cell:
+                    block_rect = pygame.Rect(
+                        col_idx * BLOCK_SIZE,
+                        row_idx * BLOCK_SIZE,
+                        BLOCK_SIZE - 1,
+                        BLOCK_SIZE - 1
+                    )
+                    # Apply alpha to the color
+                    block_color = (*color, alpha)
+                    pygame.draw.rect(piece_surface, block_color, block_rect)
+                    
+        # Draw the piece surface on the screen
+        self.screen.blit(piece_surface, (x, y))
+    
+    def draw(self):
+        """Draw the game state"""
+        # Fill background
+        self.screen.fill(CREAM)
+        
+        # Draw toolbar background
+        toolbar_y = TOP_MARGIN + GRID_HEIGHT * BLOCK_SIZE
+        pygame.draw.rect(self.screen, WHITE,
+                       (0, toolbar_y, SCREEN_WIDTH, TOOLBAR_HEIGHT))
+        
+        # Draw player slots
+        for i in range(PLAYER_SLOTS):
+            if i in self.players and self.players[i]:
+                self.draw_player_slot(i, self.players[i])
+            else:
+                self.draw_player_slot(i, None)
+        
+        # Handle different game states
+        if self.game_state == GameStatus.IN_GAME.value:
+            # Draw toolbar pieces in the left side
+            available_width = BLOCK_SIZE * GRID_WIDTH
+            if self.toolbar_pieces:
+                piece_spacing = available_width // (len(self.toolbar_pieces) + 1)
+                for idx, piece in enumerate(self.toolbar_pieces):
+                    x = piece_spacing * (idx + 1) - (len(piece['shape'][0]) * BLOCK_SIZE) // 2
+                    y = toolbar_y + (TOOLBAR_HEIGHT - len(piece['shape']) * BLOCK_SIZE) // 2
+                    
+                    if piece.get('is_valid', True):  # Default to True if not specified
+                        self.draw_piece(piece, x, y)
+                    else:
+                        self.draw_piece(piece, x, y, alpha=128)
+        else:
+            # Draw Ready/Start button in lobby
+            for button in self.buttons:
+                pygame.draw.rect(self.screen, BLACK, button['rect'], 2)
+                text = self.font.render(button['text'], True, BLACK)
+                text_rect = text.get_rect(center=button['rect'].center)
+                self.screen.blit(text, text_rect)
+        
+        # Draw selected piece following mouse if exists
+        if self.selected_piece and self.game_state == GameStatus.IN_GAME.value:
+            mouse_x, mouse_y = self.mouse_pos
+            self.draw_piece(self.selected_piece, mouse_x, mouse_y, alpha=128)
+        
+        pygame.display.flip()
+    
     def draw_player_slot(self, slot_index, player_data=None):
         """Draw a player slot with their information"""
         x = BLOCK_SIZE * GRID_WIDTH
         y = TOP_MARGIN + slot_index * PLAYER_SLOT_HEIGHT
-        
-        # Set up default resources if none provided
-        resources = {'food': 0, 'wood': 0, 'stone': 0, 'gold': 0, 'faith': 0, 'citizen': 0, 'order': 0}
-        if player_data:
-            resources.update(player_data.get('resources', {}))
         
         # Draw slot background
         slot_rect = pygame.Rect(x, y, PLAYER_SLOT_WIDTH, PLAYER_SLOT_HEIGHT)
@@ -159,7 +235,10 @@ class Client:
             name_text = name_font.render(name, True, BLACK)
             self.screen.blit(name_text, (x + 5, y + 5))
             
-            # Draw resources
+            # Set up resources
+            resources = {'food': 0, 'wood': 0, 'stone': 0, 'gold': 0, 'faith': 0, 'citizen': 0, 'order': 0}
+            resources.update(player_data.get('resources', {}))
+            
             resource_font = pygame.font.Font(None, 20)
             # 资源类型对应关系，从枚举值映射到资源名称
             resource_mapping = {
@@ -287,7 +366,10 @@ class Client:
                     if event.button == 1:  # Left click
                         self.handle_button_click(event.pos)
 
-            self.draw()
+            try:
+                self.draw()
+            except Exception as e:
+                print(f"Error drawing game state: {e}")
             self.clock.tick(60)
 
 
@@ -325,6 +407,11 @@ class Client:
                                 # 保存游戏管理器状态
                                 if 'manager' in data:
                                     self.game_manager = data['manager']
+                                    # 获取当前玩家的拼图块
+                                    if 'players' in data['manager']:
+                                        current_player_data = data['manager']['players'].get(self.username, {})
+                                        if isinstance(current_player_data, dict):
+                                            self.toolbar_pieces = current_player_data.get('puzzles', [])
                                 # 更新玩家顺序
                                 if 'players' in data:
                                     for i, player_name in enumerate(data['players']):
@@ -340,6 +427,7 @@ class Client:
                                                 'resources': player_resources,
                                                 'ready': True  # 游戏中所有玩家都是就绪状态
                                             }
+                                # 仅显示自己的手牌
                     except json.JSONDecodeError:
                         print('Error decoding message:', message.body)
                     except Exception as e:

@@ -63,6 +63,10 @@ class Manager:
         self.Desktop = Desktop(size, size)
         self.puzzle_deck = Deck(self.setting)
         self.puzzle_deck.init()
+        for player in self.players.values():
+            for i in range(0, 5):
+                puzzle = self.puzzle_deck.Draw()
+                player.puzzles.append(puzzle)
 
     def GetPuzzle(self, x, y) -> Optional[Puzzle]:
         if self.Desktop is None:
@@ -306,6 +310,7 @@ class Manager:
                 cell.terrainType = puzzle.terrainType
                 cell.puzzle_id = puzzle.puzzle_id   
                 cell.building_id = puzzle.building_id
+            
             # 放置完后 触发效果
             pass
         else:
@@ -329,6 +334,17 @@ class Manager:
         self.Desktop.Deserialize(data)
         self.players = {name: Player().Deserialize(player) for name, player in data['players'].items()}
         return True
+
+    def PlayerDraw(self, player: Player):
+        puzzle = self.puzzle_deck.Draw()
+        player.puzzles[puzzle.puzzle_id] = puzzle
+        
+    def PlayerRemovePuzzle(self, player: Player, puzzle_id):
+        try:
+            player.puzzles.pop(puzzle_id)
+        except KeyError:
+            print(f"Player {player.name} remove puzzle: PuzzleId {puzzle_id} not found")        
+
 
 if __name__ == '__main__':
     manager = Manager()

@@ -1,4 +1,9 @@
 from enum import Enum
+try:
+    from Tetris.game.terrain import Puzzle, load_puzzle 
+except:
+    from terrain import Puzzle, load_puzzle
+
 
 class PlayerResource(Enum):
     Gold = 0        # 金币
@@ -21,6 +26,7 @@ class Player:
             PlayerResource.Decree.value: 0,
             PlayerResource.Citizen.value: 0
         }
+        self.puzzles = dict()
 
     def ResourceEnough(self, cost: dict) -> bool:
         if cost is None:
@@ -40,12 +46,13 @@ class Player:
         ret = dict()
         ret['name'] = self.name
         ret['resources'] = self.resources
+        ret['puzzles'] = {puzzle.puzzle_id: puzzle.dump() for puzzle in self.puzzles.values()}
         return ret
 
     def Deserialize(self, data):
         self.name = data['name']
         self.resources = data['resources']
-
+        self.puzzles = {puzzle_id: load_puzzle(puzzle) for puzzle_id, puzzle in data['puzzles'].items()}
 
 def load_players(data: list) -> list:
     players = []

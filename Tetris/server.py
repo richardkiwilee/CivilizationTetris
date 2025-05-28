@@ -268,10 +268,14 @@ class LobbyServicer(rpc.LobbyServicer):
                 for user, _data in self.users.items():
                     ready_status[user] = _data.get('ready', False)
                 data['ready_status'] = ready_status
+                logger.debug(f'Broadcast: {data["status"]}')
+                logger.debug(f'Broadcast: {data["ready_status"]}')
             if data['status'] == GameStatus.IN_GAME.value:
                 data['current_player_index'] = self.current_player_index
                 data['players'] = self.player_order
                 data['manager'] = self.gm.Serialize()
+                logger.debug(f'Broadcast: {data["status"]}')        
+                logger.debug(f'Broadcast: {data["current_player_index"]}')       
         except Exception as ex:
             logger.error(f'Error in broadcast: {ex}')
             traceback.print_exc()
