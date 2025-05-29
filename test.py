@@ -24,7 +24,7 @@ class Terrain(Enum):
     NEIGHBORHOOD = 4   # 社区
     PLAIN = 5         # 平原
     RIVER = 6         # 河流
-    SWAMP = 7         # 沼泽
+    BARREN = 7         # 贫瘠
 
 # Load terrain images
 def load_terrain_images():
@@ -406,7 +406,7 @@ class Tetris:
             Terrain.NEIGHBORHOOD: "社区",
             Terrain.PLAIN: "平原",
             Terrain.RIVER: "河流",
-            Terrain.SWAMP: "沼泽"
+            Terrain.BARREN: "沼泽"
         }
         description = descriptions.get(terrain, terrain.name)
         text = f"地形: {description}"  # 确保使用中文字体
