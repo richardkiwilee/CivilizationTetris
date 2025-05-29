@@ -15,6 +15,19 @@ except:
     from terrain import Puzzle, Terrain, ShapeHelper
     from player import Player
     from buildings import BuildingFactory
+import logging
+
+logger = logging.getLogger('manager')
+logger.setLevel(logging.DEBUG)
+# 创建控制台处理器
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.DEBUG)
+# 创建格式化器
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+console_handler.setFormatter(formatter)
+# 将处理器添加到日志记录器
+logger.addHandler(console_handler)
+
 
 def rotate_point(x, y, rotate):
     if rotate == 0:
@@ -284,6 +297,7 @@ class Manager:
 
     def Place(self, player: Player, x, y, puzzle: Puzzle, rotate=0):
         if self.Desktop is None:
+            logger.error("Desktop is None")
             return False
         # Set the owner of the puzzle
         if self.Placeable(player, x, y, puzzle, rotate):
@@ -291,7 +305,7 @@ class Manager:
         # Try to place the puzzle on the desktop
         cost = self.BuildingFactory.GetCostById(puzzle.building_id, puzzle.building_level)
         if cost is None:
-            print(f"Cost is None. building_id: {puzzle.building_id}, level: {puzzle.building_level}")
+            logger.error(f"Cost is None. building_id: {puzzle.building_id}, level: {puzzle.building_level}")
         if player.ResourceEnough(cost):
             player.Cost(cost)
             puzzle.x = x
@@ -299,7 +313,7 @@ class Manager:
             puzzle.rotation = rotate            
             shapes = self.shape_helper.GetShape(puzzle.shape)
             if shapes is None:
-                print(f"Shape is None. shape: {puzzle.shape}")
+                logger.error(f"Shape is None. shape: {puzzle.shape}")
             for cell in shapes:   # type: Cell
                 # 计算旋转后的相对坐标
                 rx, ry = rotate_point(cell[0], cell[1], rotate)
@@ -315,7 +329,7 @@ class Manager:
             # 放置完后 触发效果
             pass
         else:
-            print("Resource not enough")
+            logger.error("Resource not enough")
             return False
         return True
 

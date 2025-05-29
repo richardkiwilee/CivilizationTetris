@@ -129,8 +129,8 @@ class Cell:
         ret = dict()
         if self.owner:  
             ret['owner'] = self.owner
-        if self.terrainType:  
-            ret['terrainType'] = self.terrainType.value
+        if self.terrainType:
+            ret['terrainType'] = self.terrainType
         if self.puzzle_id:  
             ret['puzzle_id'] = self.puzzle_id
         if self.building_id:  

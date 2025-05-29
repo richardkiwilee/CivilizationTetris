@@ -149,9 +149,35 @@ class LobbyServicer(rpc.LobbyServicer):
                 return self._response(SystemResponse.OK, resp) 
             
             if action == PlayerAction.Place.value:
-
+                logger.info(f'{sender} place {body}')
+                try:
+                    # 获取玩家
+                    player = self.gm.players[sender]
+                    # 获取拼块
+                    puzzle_id = int(body['arg2'])
+                    puzzle = player.puzzles[puzzle_id]
+                    # 获取放置位置和旋转角度
+                    x = int(body['arg3'])
+                    y = int(body['arg4'])
+                    rotate = int(body['arg5'])
+                    # 尝试放置
+                    if self.gm.Place(player, x, y, puzzle, rotate):
+                        # 放置成功，移除玩家手中的拼块
+                        self.gm.PlayerRemovePuzzle(player, puzzle_id)
+                        # 抽取新的拼块
+                        self.gm.PlayerDraw(player)
+                        resp['msg'] = f'{sender} placed puzzle {puzzle_id} at ({x}, {y}) with rotation {rotate}'
+                    else:
+                        resp['msg'] = 'Failed to place puzzle'
+                        logger.error(f'Failed to place puzzle {puzzle_id} at ({x}, {y}) with rotation {rotate}')
+                        return self._response(SystemResponse.ERROR, resp)
+                except Exception as e:
+                    logger.error(f'Error in Place action: {e}')
+                    resp['msg'] = f'Error: {str(e)}'
+                    logger.error(f'Handle Place action error: {resp}')
+                    return self._response(SystemResponse.ERROR, resp)
                 self._broadcast()
-                return self._response(SystemResponse.OK, resp) 
+                return self._response(SystemResponse.OK, resp)
 
             
             if action == PlayerAction.Active.value:
