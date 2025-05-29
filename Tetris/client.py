@@ -8,12 +8,11 @@ import pygame
 import argparse
 import logging
 from Tetris.game.action import PlayerAction, SystemResponse
+from Tetris.game.terrain import Terrain, ShapeHelper
 import Tetris.protocol.service_pb2 as pb2
 import Tetris.protocol.service_pb2_grpc as rpc
-from enum import Enum
-
 from Tetris.server import GameStatus
-from Tetris.game.terrain import Terrain
+from enum import Enum
 
 # 配置日志记录器
 logger = logging.getLogger('CivilizationTetris')
@@ -182,35 +181,31 @@ class Client:
             return [[1]]  # Default single block
             
         logger.debug(f"Converting shape: {shape_name}")
-        if shape_name == 'Corner':
-            return [
-                [1, 1],
-                [1, 0]
-            ]
-        elif shape_name == 'O':
-            return [
-                [1, 1],
-                [1, 1]
-            ]
-        elif shape_name == 'L':
-            return [
-                [1, 0],
-                [1, 0],
-                [1, 1]
-            ]
-        elif shape_name == 'J':
-            return [
-                [0, 1],
-                [0, 1],
-                [1, 1]
-            ]
-        elif shape_name == 'Cell':
-            return [[1]]  # Single cell
-        elif shape_name == 'Two':
-            return [[1, 1]]  # Two cells in a row
         
-        logger.warning(f"Unknown shape: {shape_name}, using default")
-        return [[1]]  # Default single block
+        # 使用ShapeHelper获取形状
+        shape_helper = ShapeHelper()
+        cells = shape_helper.GetShape(shape_name)
+        
+        if not cells:
+            logger.warning(f"Unknown shape: {shape_name}, using default")
+            return [[1]]  # Default single block
+            
+        # 计算形状的边界
+        min_x = min(x for x, _ in cells)
+        max_x = max(x for x, _ in cells)
+        min_y = min(y for _, y in cells)
+        max_y = max(y for _, y in cells)
+        
+        # 创建网格矩阵
+        width = max_x - min_x + 1
+        height = max_y - min_y + 1
+        matrix = [[0 for _ in range(width)] for _ in range(height)]
+        
+        # 填充矩阵
+        for x, y in cells:
+            matrix[y - min_y][x - min_x] = 1
+            
+        return matrix
     
     def load_terrain_images(self):
         """Load and scale terrain icons"""

@@ -104,10 +104,16 @@ class LobbyServicer(rpc.LobbyServicer):
                     # 从玩家顺序列表中移除
                     if username in self.player_order:
                         self.player_order.remove(username)
+                    
+                    # 检查是否还有其他用户连接
+                    if not self.users:
+                        # 如果没有用户，重置房间状态
+                        self.reset_room()
+                    
                     self._broadcast()
                 resp['msg'] = f'{username} Logout'
                 logger.debug(f'User {username} logout')
-                return self._response(SystemResponse.OK, resp)    
+                return self._response(SystemResponse.OK, resp)
             
             if action == PlayerAction.StartGame.value:
                 if sender != self.host:
@@ -143,6 +149,7 @@ class LobbyServicer(rpc.LobbyServicer):
                 return self._response(SystemResponse.OK, resp) 
             
             if action == PlayerAction.Place.value:
+
                 self._broadcast()
                 return self._response(SystemResponse.OK, resp) 
 
@@ -225,6 +232,9 @@ class LobbyServicer(rpc.LobbyServicer):
         else:
             self.users[request.sender]['stream'] = message_queue
             
+        # Register disconnect callback
+        context.add_callback(self._onDisconnectWrapper(request, context))
+            
         # Send initial game state
         self._broadcast()
         
@@ -268,14 +278,14 @@ class LobbyServicer(rpc.LobbyServicer):
                 for user, _data in self.users.items():
                     ready_status[user] = _data.get('ready', False)
                 data['ready_status'] = ready_status
-                logger.debug(f'Broadcast - Game Status:{data["status"]}')
-                logger.debug(f'Broadcast - Ready Status:{data["ready_status"]}')
+                # logger.debug(f'Broadcast - Game Status:{data["status"]}')
+                # logger.debug(f'Broadcast - Ready Status:{data["ready_status"]}')
             if data['status'] == GameStatus.IN_GAME.value:
                 data['current_player_index'] = self.current_player_index
                 data['players'] = self.player_order
                 data['manager'] = self.gm.Serialize()
-                logger.debug(f'Broadcast - Game Status:{data["status"]}')        
-                logger.debug(f'Broadcast - Current Player Index:{data["current_player_index"]}')       
+                # logger.debug(f'Broadcast - Game Status:{data["status"]}')        
+                # logger.debug(f'Broadcast - Current Player Index:{data["current_player_index"]}')       
         except Exception as ex:
             logger.error(f'Error in broadcast: {ex}')
             traceback.print_exc()
@@ -296,16 +306,34 @@ class LobbyServicer(rpc.LobbyServicer):
             logger.error(f'{data}')
             traceback.print_exc()
 
+    def reset_room(self):
+        """Reset the room to initial state"""
+        self.status = GameStatus.LOBBY.value
+        self.host = None
+        self.current_player_index = 0
+        self.gm = Manager()
+        self.users = dict()     # 记录当前大厅的玩家状态
+        self.player_order = []  # 玩家名字列表，按加入顺序决定回合顺序
+        self.current_player_index = 0
+        self.seq = 0
+        self.deck = None
+        logger.info('Room reset to lobby state')
+
     def _onDisconnectWrapper(self, request, context):
         def callback():
             try:
-                username = request.name
+                username = request.sender
                 if username in self.users:
                     user_data = self.users[username]
                     if 'stream' in user_data:
                         user_data['stream'].put(None)
                     self.users.pop(username)
                     self.player_exit(username)
+                    # 检查是否还有其他用户连接
+                    if not self.users:
+                        # 如果没有用户，重置房间状态
+                        logger.info('No users left, resetting room')
+                        self.reset_room()                    
                     self._broadcast()
                     logger.debug(f'User {username} disconnected')
             except Exception as e:
