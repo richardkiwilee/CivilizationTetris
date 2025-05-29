@@ -343,9 +343,7 @@ class Client:
         """Draw the game state"""
         logger.debug("In Draw func")
         with self.game_state_lock:
-            logger.debug("\n=== Drawing Game State ===")
-            logger.debug(f"Game State: {self.game_state}")
-            logger.debug(f"Toolbar Pieces: {len(self.toolbar_pieces)}")
+            logger.debug(f"Game State: {self.game_state}; Toolbar Pieces: {len(self.toolbar_pieces)}")
             
             # Fill background
             self.screen.fill(CREAM)
@@ -393,11 +391,11 @@ class Client:
                             x = piece_spacing * (idx + 1) - piece_width // 2
                             y = toolbar_y + (TOOLBAR_HEIGHT - piece_height) // 2
                             
-                            logger.debug(f"Drawing piece {idx}:")
-                            logger.debug(f"  - Position: ({x}, {y})")
-                            logger.debug(f"  - Dimensions: {piece_width}x{piece_height}")
-                            logger.debug(f"  - Shape: {piece['shape']}")
-                            logger.debug(f"  - Valid: {piece.get('is_valid', True)}")
+                            # logger.debug(f"Drawing piece {idx}:")
+                            # logger.debug(f"  - Position: ({x}, {y})")
+                            # logger.debug(f"  - Dimensions: {piece_width}x{piece_height}")
+                            # logger.debug(f"  - Shape: {piece['shape']}")
+                            # logger.debug(f"  - Valid: {piece.get('is_valid', True)}")
                             
                             if piece.get('is_valid', True):
                                 self.draw_piece(piece, x, y)
@@ -405,7 +403,7 @@ class Client:
                                 self.draw_piece(piece, x, y, alpha=128)
                     else:
                         logger.debug(f"No piece for grid {idx}")
-                    logger.debug("No toolbar pieces to draw")
+                    # logger.debug("No toolbar pieces to draw")
             
             # Draw buttons based on game state
             if self.game_state == GameStatus.IN_GAME.value:
@@ -579,21 +577,29 @@ class Client:
     def check_valid_placement(self, piece, grid_x, grid_y):
         """Check if piece can be placed at the given grid position"""
         if not piece or 'shape' not in piece:
+            logger.error(f"piece is invalid or shape is missing: {piece}")
             return False
 
+        # 调整网格位置，考虑到棋子的中心点
+        grid_x -= len(piece['shape'][0]) // 2
+        grid_y -= len(piece['shape']) // 2
+        
         shape = piece['shape']
         for i, row in enumerate(shape):
             for j, cell in enumerate(row):
                 if cell:
                     x, y = grid_x + j, grid_y + i
                     if not (0 <= x < GRID_WIDTH and 0 <= y < GRID_HEIGHT):
+                        logger.error(f"Invalid position: ({x}, {y}) outside grid bounds")
                         return False
                     # Check if position is already occupied
                     try:
                         desktop_data = json.loads(self.game_manager.get('Desktop', '[]'))
-                        if desktop_data[y][x] is not None:
+                        if desktop_data[y][x] != dict():
+                            logger.error(f"Position ({x}, {y}) is already occupied: {desktop_data[y][x]}")
                             return False
-                    except (json.JSONDecodeError, IndexError, KeyError):
+                    except (json.JSONDecodeError, IndexError, KeyError) as e:
+                        logger.error(f"Error checking desktop data: {e}")
                         return False
         return True
 
@@ -601,6 +607,10 @@ class Client:
         """Rotate the piece 90 degrees clockwise"""
         if not piece or 'shape' not in piece:
             return piece
+
+        # 保存原始形状用于计算旋转次数
+        if 'original_shape' not in piece:
+            piece['original_shape'] = [row[:] for row in piece['shape']]
 
         # Create a new rotated shape matrix
         old_shape = piece['shape']
@@ -614,6 +624,41 @@ class Client:
 
         piece['shape'] = new_shape
         return piece
+
+    def calculate_rotation_count(self, original_shape, current_shape):
+        """计算从原始形状到当前形状需要顺时针旋转的次数"""
+        temp_shape = [row[:] for row in original_shape]
+        for i in range(4):  # 最多旋转4次
+            if temp_shape == current_shape:
+                return i
+            # 继续旋转
+            rows = len(temp_shape)
+            cols = len(temp_shape[0])
+            new_shape = [[0 for _ in range(rows)] for _ in range(cols)]
+            for r in range(rows):
+                for c in range(cols):
+                    new_shape[c][rows - 1 - r] = temp_shape[r][c]
+            temp_shape = new_shape
+        return 0  # 如果没找到匹配，返回0
+
+    def place_piece(self, puzzle_id, rotate):
+        """放置棋子并发送消息到服务器"""
+        grid_x, grid_y = self.get_grid_pos_from_mouse(self.mouse_pos)
+        # 调整网格位置，考虑到棋子的中心点
+        grid_x -= len(self.selected_piece['shape'][0]) // 2
+        grid_y -= len(self.selected_piece['shape']) // 2
+        logger.debug(f"Placing piece at ({grid_x}, {grid_y}) with rotation {rotate}")
+        # 发送放置消息
+        self.sendMessage(
+            PlayerAction.Place.value,
+            self.username,
+            str(puzzle_id),
+            str(grid_x),
+            str(grid_y),
+            str(rotate)
+        )
+        # 结束回合
+        self.sendMessage(PlayerAction.EndTurn.value, self.username)
 
     def run(self):
         """Main game loop"""
@@ -638,13 +683,28 @@ class Client:
                                 # Try to place the piece
                                 if self.is_mouse_in_grid(event.pos):
                                     grid_x, grid_y = self.get_grid_pos_from_mouse(event.pos)
+                                    logger.debug(f"Placing piece at ({grid_x}, {grid_y})")
                                     if self.check_valid_placement(self.selected_piece, grid_x, grid_y):
-                                        # Send place piece message
+                                        # 计算旋转次数
+                                        original_shape = self.selected_piece.get('original_shape', self.selected_piece['shape'])
+                                        current_shape = self.selected_piece['shape']
+                                        rotate_count = self.calculate_rotation_count(original_shape, current_shape)
+                                        logger.debug(f"Rotating piece {rotate_count} times")
+                                        # 放置棋子
                                         piece_id = self.selected_piece.get('id')
-                                        self.sendMessage(PlayerAction.PlacePiece.value, self.username, piece_id, str(grid_x), str(grid_y))
-                                        self.sendMessage(PlayerAction.EndTurn.value, self.username)
+                                        logger.debug(f'Place puzzle_id={piece_id}')
+                                        try:
+                                            self.place_piece(piece_id, rotate_count)
+                                        except Exception as e:
+                                            logger.error(f"Failed to place piece: {e}")
+                                        
+                                        # 取消选中状态
                                         self.selected_piece = None
                                         last_piece_pos = None
+                                    else:
+                                        logger.error(f'invalid placement {self.selected_piece} at ({grid_x}, {grid_y})')
+                                else:
+                                    logger.error("Invalid placement")
                             else:
                                 # Try to select a piece from toolbar
                                 piece = self.get_toolbar_piece_at_pos(event.pos)
@@ -744,7 +804,7 @@ class Client:
                                         
                                         # Update the game state first
                                         self.game_state = data['status']
-                                        logger.info(f"Game state updated to: {self.game_state}")
+                                        # logger.info(f"Game state updated to: {self.game_state}")
                                         
                                         # Then update current player's toolbar pieces
                                         current_player_data = players_data.get(self.username, {})
@@ -769,7 +829,7 @@ class Client:
                                         
                                         # 只设置重绘标志，让主循环处理重绘
                                         self.needs_redraw = True
-                                        logger.debug("Set needs_redraw to True")
+                                        # logger.debug("Set needs_redraw to True")
                     except json.JSONDecodeError:
                         logger.error('Error decoding message:', message.body)
                         traceback.print_exc()
