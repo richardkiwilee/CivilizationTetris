@@ -115,7 +115,6 @@ class Client:
         self.players = {}
         self.toolbar_pieces = []
         self.needs_redraw = False
-        self.redraw_lock = threading.Lock()
         
         # Button setup
         button_x = BLOCK_SIZE * GRID_WIDTH + (PLAYER_SLOT_WIDTH - BUTTON_WIDTH) // 2
@@ -247,6 +246,15 @@ class Client:
         if not shape:
             logger.error("Empty shape matrix")
             return
+            
+        # If drawing a selected piece over the grid, snap to grid
+        if self.selected_piece is piece and self.is_mouse_in_grid((x, y)):
+            grid_x, grid_y = self.get_grid_pos_from_mouse((x, y))
+            # 将鼠标位置调整到中心
+            grid_x -= len(shape[0]) // 2
+            grid_y -= len(shape) // 2
+            x = grid_x * BLOCK_SIZE
+            y = grid_y * BLOCK_SIZE + TOP_MARGIN
             
         # Draw each block of the piece
         for i, row in enumerate(shape):
@@ -526,12 +534,96 @@ class Client:
                     self.sendMessage(PlayerAction.EndTurn.value, self.username)
                 break
 
+    def is_mouse_in_toolbar(self, pos):
+        """Check if mouse is in the toolbar area"""
+        return SCREEN_HEIGHT - TOOLBAR_HEIGHT <= pos[1] <= SCREEN_HEIGHT
+
+    def get_toolbar_piece_at_pos(self, pos):
+        """Get the piece at the given position in the toolbar"""
+        x, y = pos
+        toolbar_y = SCREEN_HEIGHT - TOOLBAR_HEIGHT
+        
+        # Calculate piece positions using only the left side width
+        available_width = BLOCK_SIZE * GRID_WIDTH
+        piece_spacing = available_width // (len(self.toolbar_pieces) + 1)
+        
+        # Check each piece
+        for idx, piece in enumerate(self.toolbar_pieces):
+            piece_x = piece_spacing * (idx + 1) - (len(piece['shape'][0]) * BLOCK_SIZE) // 2
+            piece_y = toolbar_y + (TOOLBAR_HEIGHT - len(piece['shape']) * BLOCK_SIZE) // 2
+            
+            # Check if click is within piece bounds, including each cell
+            for i, row in enumerate(piece['shape']):
+                for j, cell in enumerate(row):
+                    if cell:
+                        cell_x = piece_x + j * BLOCK_SIZE
+                        cell_y = piece_y + i * BLOCK_SIZE
+                        if (cell_x <= x < cell_x + BLOCK_SIZE and
+                            cell_y <= y < cell_y + BLOCK_SIZE):
+                            return piece
+        
+        return None
+
+    def get_grid_pos_from_mouse(self, pos):
+        """Convert mouse position to grid coordinates"""
+        x = pos[0] // BLOCK_SIZE
+        y = (pos[1] - TOP_MARGIN) // BLOCK_SIZE
+        return x, y
+
+    def is_mouse_in_grid(self, pos):
+        """Check if mouse is in the game grid"""
+        x, y = pos
+        return (0 <= x < GRID_WIDTH * BLOCK_SIZE and
+                TOP_MARGIN <= y < TOP_MARGIN + GRID_HEIGHT * BLOCK_SIZE)
+
+    def check_valid_placement(self, piece, grid_x, grid_y):
+        """Check if piece can be placed at the given grid position"""
+        if not piece or 'shape' not in piece:
+            return False
+
+        shape = piece['shape']
+        for i, row in enumerate(shape):
+            for j, cell in enumerate(row):
+                if cell:
+                    x, y = grid_x + j, grid_y + i
+                    if not (0 <= x < GRID_WIDTH and 0 <= y < GRID_HEIGHT):
+                        return False
+                    # Check if position is already occupied
+                    try:
+                        desktop_data = json.loads(self.game_manager.get('Desktop', '[]'))
+                        if desktop_data[y][x] is not None:
+                            return False
+                    except (json.JSONDecodeError, IndexError, KeyError):
+                        return False
+        return True
+
+    def rotate_piece(self, piece):
+        """Rotate the piece 90 degrees clockwise"""
+        if not piece or 'shape' not in piece:
+            return piece
+
+        # Create a new rotated shape matrix
+        old_shape = piece['shape']
+        rows = len(old_shape)
+        cols = len(old_shape[0])
+        new_shape = [[0 for _ in range(rows)] for _ in range(cols)]
+
+        for i in range(rows):
+            for j in range(cols):
+                new_shape[j][rows - 1 - i] = old_shape[i][j]
+
+        piece['shape'] = new_shape
+        return piece
+
     def run(self):
         """Main game loop"""
         logger.info("Starting game loop...")
         self.needs_redraw = True  # Force initial draw
+        last_piece_pos = None
+        last_draw_time = time.time()
         
         while self.running:
+            current_time = time.time()
             # Handle events
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -541,21 +633,56 @@ class Client:
                         self.handle_quit()
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     if event.button == 1:  # Left click
+                        if self.game_state == GameStatus.IN_GAME.value:
+                            if self.selected_piece:
+                                # Try to place the piece
+                                if self.is_mouse_in_grid(event.pos):
+                                    grid_x, grid_y = self.get_grid_pos_from_mouse(event.pos)
+                                    if self.check_valid_placement(self.selected_piece, grid_x, grid_y):
+                                        # Send place piece message
+                                        piece_id = self.selected_piece.get('id')
+                                        self.sendMessage(PlayerAction.PlacePiece.value, self.username, piece_id, str(grid_x), str(grid_y))
+                                        self.sendMessage(PlayerAction.EndTurn.value, self.username)
+                                        self.selected_piece = None
+                                        last_piece_pos = None
+                            else:
+                                # Try to select a piece from toolbar
+                                piece = self.get_toolbar_piece_at_pos(event.pos)
+                                if piece:
+                                    self.selected_piece = piece.copy()
+                                    self.needs_redraw = True
                         self.handle_button_click(event.pos)
-                        with self.redraw_lock:
+                    elif event.button == 3:  # Right click
+                        # Cancel piece selection
+                        if self.selected_piece:
+                            self.selected_piece = None
+                            last_piece_pos = None
                             self.needs_redraw = True
+                elif event.type == pygame.MOUSEMOTION:
+                    self.mouse_pos = event.pos
+                    # Only redraw if we have a selected piece and it's over the grid
+                    if self.selected_piece and self.is_mouse_in_grid(event.pos):
+                        current_pos = self.get_grid_pos_from_mouse(event.pos)
+                        if last_piece_pos != current_pos:
+                            last_piece_pos = current_pos
+                            self.needs_redraw = True
+                elif event.type == pygame.MOUSEWHEEL:
+                    # Rotate selected piece
+                    if self.selected_piece:
+                        self.selected_piece = self.rotate_piece(self.selected_piece)
+                        self.needs_redraw = True
 
-            # Draw if needed
-            with self.redraw_lock:
-                if self.needs_redraw:
-                    try:
-                        logger.debug(f"In run: Drawing game state: {self.game_state}")
-                        self.draw()
-                        pygame.display.flip()
-                        self.needs_redraw = False
-                    except Exception as e:
-                        logger.error(f"Error drawing game state: {e}")
-                        logger.error(traceback.format_exc())
+            # Draw if needed and enough time has passed since last draw
+            if self.needs_redraw and current_time - last_draw_time >= 1/30:  # 限制最大刷新率为30FPS
+                try:
+                    logger.debug(f"In run: Drawing game state: {self.game_state}")
+                    self.draw()
+                    pygame.display.flip()
+                    self.needs_redraw = False
+                    last_draw_time = current_time
+                except Exception as e:
+                    logger.error(f"Error drawing game state: {e}")
+                    logger.error(traceback.format_exc())
 
             # Control frame rate
             self.clock.tick(60)
@@ -640,10 +767,9 @@ class Client:
                                         # Update button text based on game state
                                         self.buttons[0]['text'] = 'EndTurn'
                                         
-                                        # Set redraw flag
-                                        with self.redraw_lock:
-                                            self.needs_redraw = True
-                                            logger.debug("Set needs_redraw to True")
+                                        # 只设置重绘标志，让主循环处理重绘
+                                        self.needs_redraw = True
+                                        logger.debug("Set needs_redraw to True")
                     except json.JSONDecodeError:
                         logger.error('Error decoding message:', message.body)
                         traceback.print_exc()

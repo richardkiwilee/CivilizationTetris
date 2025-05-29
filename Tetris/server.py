@@ -137,7 +137,7 @@ class LobbyServicer(rpc.LobbyServicer):
                 return self._response(SystemResponse.ERROR, resp) 
 
             if action == PlayerAction.EndTurn.value:
-                self._next_player()
+                self.next_player()
                 self._broadcast()
                 resp['msg'] = f'{sender} end turn'
                 return self._response(SystemResponse.OK, resp) 
