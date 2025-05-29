@@ -381,10 +381,6 @@ class Client:
                 
                 # 遍历所有可能的位置
                 for idx in range(max_pieces):
-                    # 计算图标的位置
-                    grid_x = piece_spacing * (idx + 1) - BLOCK_SIZE // 2  # 居中显示
-                    grid_y = toolbar_y + (TOOLBAR_HEIGHT - BLOCK_SIZE) // 2  # 垂直居中
-                    
                     # 如果有对应的piece则绘制
                     if self.toolbar_pieces and idx < len(self.toolbar_pieces):
                         piece = self.toolbar_pieces[idx]
@@ -393,9 +389,9 @@ class Client:
                             piece_width = len(piece['shape'][0]) * BLOCK_SIZE
                             piece_height = len(piece['shape']) * BLOCK_SIZE
                             
-                            # 在grid中居中
-                            x = grid_x - piece_width // 2
-                            y = grid_y + (TOOLBAR_HEIGHT - piece_height) // 2
+                            # 计算piece位置，与get_toolbar_piece_at_pos保持一致
+                            x = piece_spacing * (idx + 1) - piece_width // 2
+                            y = toolbar_y + (TOOLBAR_HEIGHT - piece_height) // 2
                             
                             logger.debug(f"Drawing piece {idx}:")
                             logger.debug(f"  - Position: ({x}, {y})")
@@ -404,9 +400,9 @@ class Client:
                             logger.debug(f"  - Valid: {piece.get('is_valid', True)}")
                             
                             if piece.get('is_valid', True):
-                                self.draw_piece(piece, grid_x, grid_y)
+                                self.draw_piece(piece, x, y)
                             else:
-                                self.draw_piece(piece, grid_x, grid_y, alpha=128)
+                                self.draw_piece(piece, x, y, alpha=128)
                     else:
                         logger.debug(f"No piece for grid {idx}")
                     logger.debug("No toolbar pieces to draw")
@@ -540,27 +536,31 @@ class Client:
 
     def get_toolbar_piece_at_pos(self, pos):
         """Get the piece at the given position in the toolbar"""
+        if not self.toolbar_pieces:
+            return None
+            
         x, y = pos
         toolbar_y = SCREEN_HEIGHT - TOOLBAR_HEIGHT
-        
+
         # Calculate piece positions using only the left side width
         available_width = BLOCK_SIZE * GRID_WIDTH
-        piece_spacing = available_width // (len(self.toolbar_pieces) + 1)
-        
+        max_pieces = max(5, len(self.toolbar_pieces))  # 至少预留5个位置
+        piece_spacing = available_width // (max_pieces + 1)
+
         # Check each piece
         for idx, piece in enumerate(self.toolbar_pieces):
-            piece_x = piece_spacing * (idx + 1) - (len(piece['shape'][0]) * BLOCK_SIZE) // 2
-            piece_y = toolbar_y + (TOOLBAR_HEIGHT - len(piece['shape']) * BLOCK_SIZE) // 2
+            # Calculate piece dimensions
+            piece_width = len(piece['shape'][0]) * BLOCK_SIZE
+            piece_height = len(piece['shape']) * BLOCK_SIZE
             
-            # Check if click is within piece bounds, including each cell
-            for i, row in enumerate(piece['shape']):
-                for j, cell in enumerate(row):
-                    if cell:
-                        cell_x = piece_x + j * BLOCK_SIZE
-                        cell_y = piece_y + i * BLOCK_SIZE
-                        if (cell_x <= x < cell_x + BLOCK_SIZE and
-                            cell_y <= y < cell_y + BLOCK_SIZE):
-                            return piece
+            # Calculate piece position
+            piece_x = piece_spacing * (idx + 1) - piece_width // 2
+            piece_y = toolbar_y + (TOOLBAR_HEIGHT - piece_height) // 2
+            
+            # Check if click is within piece bounds
+            if (piece_x <= x < piece_x + piece_width and
+                piece_y <= y < piece_y + piece_height):
+                return piece
         
         return None
 
