@@ -585,27 +585,38 @@ class Client:
             logger.error(f"piece is invalid or shape is missing: {piece}")
             return False
 
-        # 调整网格位置，考虑到棋子的中心点
-        grid_x -= len(piece['shape'][0]) // 2
-        grid_y -= len(piece['shape']) // 2
+        # 获取旋转后的相对坐标
+        cells = None
+        if 'rotated_cells' in piece:
+            cells = piece['rotated_cells']
+        else:
+            shape_helper = ShapeHelper()
+            cells = shape_helper.GetShape(piece['shape'])
         
-        shape = piece['shape']
-        for i, row in enumerate(shape):
-            for j, cell in enumerate(row):
-                if cell:
-                    x, y = grid_x + j, grid_y + i
-                    if not (0 <= x < GRID_WIDTH and 0 <= y < GRID_HEIGHT):
-                        logger.error(f"Invalid position: ({x}, {y}) outside grid bounds")
-                        return False
-                    # Check if position is already occupied
-                    try:
-                        desktop_data = json.loads(self.game_manager.get('Desktop', '[]'))
-                        if desktop_data[y][x] != dict():
-                            logger.error(f"Position ({x}, {y}) is already occupied: {desktop_data[y][x]}")
-                            return False
-                    except (json.JSONDecodeError, IndexError, KeyError) as e:
-                        logger.error(f"Error checking desktop data: {e}")
-                        return False
+        if not cells:
+            logger.error("Empty shape")
+            return False
+
+        # 检查每个方块的位置
+        for cell_x, cell_y in cells:
+            # 计算实际的网格位置
+            x = grid_x + cell_x
+            y = grid_y - cell_y  # 注意这里是减号，因为向下为负
+            
+            # 检查是否超出网格范围
+            if not (0 <= x < GRID_WIDTH and 0 <= y < GRID_HEIGHT):
+                logger.error(f"Invalid position: ({x}, {y}) outside grid bounds")
+                return False
+                
+            # 检查该位置是否已被占用
+            try:
+                desktop_data = json.loads(self.game_manager.get('Desktop', '[]'))
+                if desktop_data[y][x] != dict():
+                    logger.error(f"Position ({x}, {y}) is already occupied: {desktop_data[y][x]}")
+                    return False
+            except (json.JSONDecodeError, IndexError, KeyError) as e:
+                logger.error(f"Error checking desktop data: {e}")
+                return False
         return True
 
     def rotate_piece(self, piece):
