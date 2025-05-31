@@ -78,8 +78,10 @@ class Manager:
         self.puzzle_deck.init()
         for player in self.players.values():
             print(player.name)
-            for i in range(0, 5):
-                self.PlayerDraw(player)
+            for i in range(0, 3):
+                self.PlayerDrawBuilding(player)
+            for i in range(0, 2):
+                self.PlayerDrawTerrain(player)
             print(player.puzzles)
 
     def GetPuzzle(self, x, y) -> Optional[Puzzle]:
@@ -356,7 +358,15 @@ class Manager:
     def PlayerDraw(self, player: Player):
         puzzle = self.puzzle_deck.Draw()
         player.puzzles[puzzle.puzzle_id] = puzzle
-        
+
+    def PlayerDrawBuilding(self, player: Player):
+        puzzle = self.puzzle_deck.DrawBuilding()
+        player.puzzles[puzzle.puzzle_id] = puzzle
+
+    def PlayerDrawTerrain(self, player: Player):
+        puzzle = self.puzzle_deck.DrawTerrain()
+        player.puzzles[puzzle.puzzle_id] = puzzle
+
     def PlayerRemovePuzzle(self, player: Player, puzzle_id):
         try:
             player.puzzles.pop(puzzle_id)

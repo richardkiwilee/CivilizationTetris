@@ -218,8 +218,13 @@ class Client:
             return
             
         # 获取形状的相对坐标
-        shape_helper = ShapeHelper()
-        cells = shape_helper.GetShape(piece['shape'])
+        cells = None
+        if 'rotated_cells' in piece:
+            cells = piece['rotated_cells']
+        else:
+            shape_helper = ShapeHelper()
+            cells = shape_helper.GetShape(piece['shape'])
+        
         if not cells:
             logger.error("Empty shape")
             return
@@ -608,9 +613,12 @@ class Client:
         if not piece or 'shape' not in piece:
             return piece
 
-        # 保存原始形状用于计算旋转次数
-        if 'original_shape' not in piece:
-            piece['original_shape'] = piece['shape']
+        # 初始化rotation计数
+        if 'rotation' not in piece:
+            piece['rotation'] = 0
+
+        # 顺时针旋转90度，增加rotation计数
+        piece['rotation'] = (piece['rotation'] + 1) % 4
 
         # 获取当前形状的相对坐标
         shape_helper = ShapeHelper()
@@ -618,31 +626,25 @@ class Client:
         if not cells:
             return piece
 
-        # 顿时针旋转90度
-        # 对于每个点(x,y)，旋转后的坐标为(y,-x)
-        rotated_cells = [(y, -x) for x, y in cells]
+        # 根据rotation次数旋转相对坐标
+        # 对于每个点(x,y)：
+        # 旋转90度：(y,-x)
+        # 旋转180度：(-x,-y)
+        # 旋转270度：(-y,x)
+        rotated_cells = []
+        for x, y in cells:
+            for _ in range(piece['rotation']):
+                x, y = y, -x
+            rotated_cells.append((x, y))
 
-        # 找到对应的形状名称
-        # 如果是I形状，从水平变垂直或从垂直变水平
-        if piece['shape'] == 'I':
-            piece['shape'] = 'I_vertical' if piece['shape'] == 'I' else 'I'
-        # 如果是Z形状，从水平变垂直或从垂直变水平
-        elif piece['shape'] == 'Z':
-            piece['shape'] = 'Z_vertical' if piece['shape'] == 'Z' else 'Z'
-        # 如果是S形状，从水平变垂直或从垂直变水平
-        elif piece['shape'] == 'S':
-            piece['shape'] = 'S_vertical' if piece['shape'] == 'S' else 'S'
-        # 其他形状保持不变
-
+        # 更新piece的cells
+        piece['rotated_cells'] = rotated_cells
         return piece
 
     def calculate_rotation_count(self, original_shape, current_shape):
-        """计算从原始形状到当前形状需要顿时针旋转的次数"""
-        # 对于使用形状名称的方式，我们只需要判断是否需要旋转
-        # 如果是 I/Z/S 形状，只有两种状态，返回0或1
-        if original_shape in ['I', 'I_vertical', 'Z', 'Z_vertical', 'S', 'S_vertical']:
-            return 1 if original_shape != current_shape else 0
-        # 其他形状保持不变
+        """返回当前的rotation值"""
+        if self.selected_piece and 'rotation' in self.selected_piece:
+            return self.selected_piece['rotation']
         return 0
 
     def place_piece(self, puzzle_id, rotate):
@@ -747,8 +749,28 @@ class Client:
                 elif event.type == pygame.MOUSEWHEEL:
                     # Rotate selected piece
                     if self.selected_piece:
-                        self.selected_piece = self.rotate_piece(self.selected_piece)
-                        self.needs_redraw = True
+                        # 向下滚动时y为负，顺时针旋转
+                        # 向上滚动时y为正，逆时针旋转
+                        if event.y < 0:  # 向下滚动
+                            # 顺时针旋转
+                            self.selected_piece['rotation'] = (self.selected_piece.get('rotation', 0) + 1) % 4
+                        else:  # 向上滚动
+                            # 逆时针旋转
+                            self.selected_piece['rotation'] = (self.selected_piece.get('rotation', 0) - 1) % 4
+                        
+                        # 获取形状的相对坐标
+                        shape_helper = ShapeHelper()
+                        cells = shape_helper.GetShape(self.selected_piece['shape'])
+                        if cells:
+                            # 根据rotation次数旋转相对坐标
+                            rotated_cells = []
+                            for x, y in cells:
+                                rx, ry = x, y
+                                for _ in range(self.selected_piece['rotation']):
+                                    rx, ry = ry, -rx
+                                rotated_cells.append((rx, ry))
+                            self.selected_piece['rotated_cells'] = rotated_cells
+                            self.needs_redraw = True
 
             # Draw if needed and enough time has passed since last draw
             if self.needs_redraw and current_time - last_draw_time >= 1/30:  # 限制最大刷新率为30FPS

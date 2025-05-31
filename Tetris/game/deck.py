@@ -17,14 +17,17 @@ DEFAULT_MAP_SETTING = {
         Terrain.Farmland.value: 0,
         Terrain.Mountain.value: 5,
         Terrain.Barren.value: 2,
-    }
+    },
+    'BuildingRate': 4   # n分之一的概率抽到建筑
 }
 
 class Deck:
     def __init__(self, setting=DEFAULT_MAP_SETTING):
         self.setting = setting
-        self.draw_pile = list()
-        self.discard_pile = list()
+        self.terrain_draw_pile = list()
+        self.terrain_discard_pile = list()
+        self.building_draw_pile = list()
+        self.building_discard_pile = list()
         self.init()
 
     def init(self):
@@ -52,7 +55,7 @@ class Deck:
                     puzzle.building_level = 0
                     puzzle.army = 0
                     puzzle.army_owner = None
-                    self.draw_pile.append(puzzle)
+                    self.building_draw_pile.append(puzzle)
                     index += 1
         except Exception as e:
             print(f"Error reading building config: {e}")
@@ -70,22 +73,35 @@ class Deck:
                 puzzle.building_level = None
                 puzzle.army = None
                 puzzle.army_owner = None
-                self.draw_pile.append(puzzle)
+                self.terrain_draw_pile.append(puzzle)
                 index += 1
-        random.shuffle(self.draw_pile)
-
+        random.shuffle(self.building_draw_pile)
+        random.shuffle(self.terrain_draw_pile)
 
     def Draw(self) -> Puzzle:
-        return self.draw_pile.pop()
+        if random.randint(0, self.setting['BuildingRate']) == 0:
+            return self.DrawBuilding()
+        else:
+            return self.DrawTerrain()
+
+    def DrawBuilding(self) -> Puzzle:
+        return self.building_draw_pile.pop()
+
+    def DrawTerrain(self) -> Puzzle:
+        return self.terrain_draw_pile.pop()
 
     def Serialize(self):
         ret = dict()
         ret['setting'] = self.setting
-        ret['draw_pile'] = [p.dump() for p in self.draw_pile]
-        ret['discard_pile'] = [p.dump() for p in self.discard_pile]
+        ret['building_draw_pile'] = [p.dump() for p in self.building_draw_pile]
+        ret['building_discard_pile'] = [p.dump() for p in self.building_discard_pile]
+        ret['terrain_draw_pile'] = [p.dump() for p in self.terrain_draw_pile]
+        ret['terrain_discard_pile'] = [p.dump() for p in self.terrain_discard_pile]
         return ret
 
     def Deserialize(self, data):
         self.setting = data['setting']
-        self.draw_pile = [load_puzzle(p) for p in data['draw_pile']]
-        self.discard_pile = [load_puzzle(p) for p in data['discard_pile']]
+        self.building_draw_pile = [load_puzzle(p) for p in data['building_draw_pile']]
+        self.building_discard_pile = [load_puzzle(p) for p in data['building_discard_pile']]
+        self.terrain_draw_pile = [load_puzzle(p) for p in data['terrain_draw_pile']]
+        self.terrain_discard_pile = [load_puzzle(p) for p in data['terrain_discard_pile']]
