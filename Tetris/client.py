@@ -224,31 +224,18 @@ class Client:
             logger.error("Empty shape")
             return
             
-        # 计算形状的边界
-        min_x = min(x for x, _ in cells)
-        max_x = max(x for x, _ in cells)
-        min_y = min(y for _, y in cells)
-        max_y = max(y for _, y in cells)
-        
-        # 计算形状的尺寸
-        piece_width = (max_x - min_x + 1) * BLOCK_SIZE
-        piece_height = (max_y - min_y + 1) * BLOCK_SIZE
-            
         # If drawing a selected piece over the grid, snap to grid
         if self.selected_piece is piece and self.is_mouse_in_grid((x, y)):
             grid_x, grid_y = self.get_grid_pos_from_mouse((x, y))
-            # 将鼠标位置调整到中心
-            grid_x -= piece_width // (2 * BLOCK_SIZE)
-            grid_y -= piece_height // (2 * BLOCK_SIZE)
             x = grid_x * BLOCK_SIZE
             y = grid_y * BLOCK_SIZE + TOP_MARGIN
             
         # 绘制每个方块
         for cell_x, cell_y in cells:
             # 计算实际的绘制位置
-            block_x = x + (cell_x - min_x) * BLOCK_SIZE
+            block_x = x + cell_x * BLOCK_SIZE
             # 注意这里使用cell_y的负值，因为向下为负
-            block_y = y + (-cell_y - min_y) * BLOCK_SIZE
+            block_y = y - cell_y * BLOCK_SIZE
             self.draw_block(block_x, block_y, piece.get('terrain', 0), alpha)
     
     def draw_game_board(self):
