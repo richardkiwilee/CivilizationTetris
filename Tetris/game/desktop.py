@@ -4,6 +4,18 @@ except:
     from terrain import *
 
 import json
+import logging
+logger = logging.getLogger('desktop')
+logger.setLevel(logging.DEBUG)
+# 创建控制台处理器
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.DEBUG)
+# 创建格式化器
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+console_handler.setFormatter(formatter)
+# 将处理器添加到日志记录器
+logger.addHandler(console_handler)
+
 class Desktop:
     def __init__(self, row, col):
         self.rows = row
@@ -12,12 +24,15 @@ class Desktop:
 
     def GetCell(self, x, y):
         if x < 0 or x >= self.rows or y < 0 or y >= self.cols:
-            print(f'GetCell {x}, {y} out of range')
+            logger.error(f'GetCell {x}, {y} out of range')
             return None
-        return self.GameMap[x][y]
+        _cell = self.GameMap[x][y]
+        logger.debug(f'GetCell {x}, {y}: {_cell.dump()}')
+        return _cell
 
     def SetCell(self, x, y, cell):
         if x < 0 or x >= self.rows or y < 0 or y >= self.cols:
+            logger.error(f'SetCell {x}, {y} out of range')
             return
         self.GameMap[x][y] = cell
 

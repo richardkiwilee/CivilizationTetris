@@ -175,6 +175,7 @@ class LobbyServicer(rpc.LobbyServicer):
                     logger.error(f'Error in Place action: {e}')
                     resp['msg'] = f'Error: {str(e)}'
                     logger.error(f'Handle Place action error: {resp}')
+                    traceback.print_exc()
                     return self._response(SystemResponse.ERROR, resp)
                 self._broadcast()
                 return self._response(SystemResponse.OK, resp)

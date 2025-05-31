@@ -110,7 +110,6 @@ class ShapeHelper:
         _ = self.shapes.get(shape, None)
         if _ is not None:   
             return _
-        print(f'GetShape {shape} not found: {shape}')
         return None
 
 
@@ -128,6 +127,9 @@ class Cell:
         self.terrainType = Terrain.Unknown.value
         self.puzzle_id = None
         self.building_id = None
+
+    def get(self, key):
+        return getattr(self, key)
 
     def dump(self):
         ret = dict()

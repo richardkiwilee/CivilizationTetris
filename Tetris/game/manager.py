@@ -77,12 +77,11 @@ class Manager:
         self.puzzle_deck = Deck(self.setting)
         self.puzzle_deck.init()
         for player in self.players.values():
-            print(player.name)
+            logger.info(f'Player: {player.name} setting initial hand cards.')
             for i in range(0, 3):
                 self.PlayerDrawBuilding(player)
             for i in range(0, 2):
                 self.PlayerDrawTerrain(player)
-            print(player.puzzles)
 
     def GetPuzzle(self, x, y) -> Optional[Puzzle]:
         if self.Desktop is None:
@@ -113,34 +112,24 @@ class Manager:
     def Placeable(self, player: Player, x, y, puzzle: Puzzle, rotate=0) -> bool:
         if self.Desktop is None:
             return False
-        shape = puzzle.shape
-        if puzzle.terrainType == Terrain.Building.value:
-            for _cell in self.shape_helper.GetShape(shape):
-                # 计算旋转后的相对坐标
-                rx, ry = rotate_point(_cell[0], _cell[1], rotate)
-                # 计算实际坐标
-                ax, ay = x + rx, y + ry
-                # 检查坐标是否在地图范围内
-                if ax < 0 or ax >= self.Desktop.rows or ay < 0 or ay >= self.Desktop.cols:
-                    return False
-                # 检查该位置是否已被占用 建筑可以在己方相同的地形上加盖
-                cell = self.Desktop.GetCell(ax, ay)
-                if cell is None:
-                    return False
-                if cell is not None:
-                    if cell.owner != player.name:
-                        return False
-                    if cell.terrain != puzzle.terrain:
-                        return False
-        else:
-            for cell in self.shape_helper.GetShape(shape):
-                # 计算旋转后的相对坐标
-                rx, ry = rotate_point(cell[0], cell[1], rotate)
-                # 计算实际坐标
-                ax, ay = x + rx, y + ry
-                # 检查坐标是否在地图范围内
-                if ax < 0 or ax >= self.Desktop.rows or ay < 0 or ay >= self.Desktop.cols:
-                    return False
+        shapes = self.shape_helper.GetShape(puzzle.shape)
+        for _cell in shapes:
+            # 计算旋转后的相对坐标
+            rx, ry = rotate_point(_cell[0], _cell[1], rotate)
+            # 计算实际坐标
+            ax, ay = x + rx, y - ry
+            # 检查坐标是否在地图范围内
+            if ax < 0 or ax >= self.Desktop.rows or ay < 0 or ay >= self.Desktop.cols:
+                return False
+            # 检查该位置是否已被占用 建筑可以在己方相同的地形上加盖
+            cell = self.Desktop.GetCell(ay, ax)
+            if cell is None:
+                logger.error(f"Check Cell Placeable fail: cell {ax}, {ay} is None")
+                return False
+            if cell.owner is not None:
+                logger.error(f"Check Cell Placeable fail: cell {ax}, {ay} is occupied")
+                return False
+        # TODO: 需要一个相邻的友方领土
         return True
 
     def GetPuzzleCells(self, x, y, puzzle: Puzzle, rotate):
@@ -220,7 +209,7 @@ class Manager:
         connected = dict()
         for cell in puzzle.cells:
             rx, ry = rotate_point(cell[0], cell[1], rotate)
-            ax, ay = x + rx, y + ry
+            ax, ay = x + rx, y - ry
             _cell = self.Desktop.GetCell(ax, ay)
             if _cell and _cell.terrain:
                 if _cell.terrain not in connected:
@@ -304,6 +293,8 @@ class Manager:
         # Set the owner of the puzzle
         if self.Placeable(player, x, y, puzzle, rotate):
             puzzle.owner = player.name
+        else:
+            return False
         # Try to place the puzzle on the desktop
         cost = self.BuildingFactory.GetCostById(puzzle.building_id, puzzle.building_level)
         if cost is None:
