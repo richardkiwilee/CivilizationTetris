@@ -245,63 +245,85 @@ class Client:
     
     def draw_game_board(self):
         """Draw the game grid and placed pieces"""
-        # Draw grid lines and block group borders
-        for y in range(GRID_HEIGHT):
-            for x in range(GRID_WIDTH):
-                # Draw basic grid
-                rect = pygame.Rect(
-                    x * BLOCK_SIZE,
-                    TOP_MARGIN + y * BLOCK_SIZE,
-                    BLOCK_SIZE - 1,
-                    BLOCK_SIZE - 1
-                )
-                pygame.draw.rect(self.screen, BLACK, rect, 1)
-                
-                # Draw block group borders only at the edges
-                if x % FILL_BLOCK == 0 and y % FILL_BLOCK == 0:
-                    # Calculate block group position
-                    start_x = x * BLOCK_SIZE
-                    start_y = y * BLOCK_SIZE + TOP_MARGIN
-                    width = FILL_BLOCK * BLOCK_SIZE
-                    height = FILL_BLOCK * BLOCK_SIZE
-                    
-                    if x < GRID_WIDTH - FILL_BLOCK + 1 and y < GRID_HEIGHT - FILL_BLOCK + 1:
+        # Draw grid lines and terrain
+        if self.game_state == GameStatus.IN_GAME.value and hasattr(self, 'game_manager'):
+            try:
+                desktop_data = json.loads(self.game_manager.get('Desktop', '[]'))
+                for y, row in enumerate(desktop_data):
+                    for x, cell in enumerate(row):
+                        # Draw cell borders
+                        rect = pygame.Rect(
+                            x * BLOCK_SIZE,
+                            TOP_MARGIN + y * BLOCK_SIZE,
+                            BLOCK_SIZE - 1,
+                            BLOCK_SIZE - 1
+                        )
+                        pygame.draw.rect(self.screen, BLACK, rect, 1)
+                        
+                        # Draw terrain if exists
+                        if cell and cell.get('terrainType'):
+                            terrain = cell['terrainType']
+                            img = self.terrain_images.get(terrain)
+                            if img:
+                                self.screen.blit(img, 
+                                                (x * BLOCK_SIZE, 
+                                                 y * BLOCK_SIZE + TOP_MARGIN))
+                        
+                        # Draw building ID if exists
+                        if cell and cell.get('building_id'):
+                            text = self.font.render(str(cell['building_id']), True, BLACK)
+                            text_rect = text.get_rect(center=rect.center)
+                            self.screen.blit(text, text_rect)
+                            
+                # Draw block group borders
+                for block_y in range(BLOCK_COUNT):
+                    for block_x in range(BLOCK_COUNT):
+                        # Calculate block group position
+                        start_x = block_x * FILL_BLOCK * BLOCK_SIZE
+                        start_y = block_y * FILL_BLOCK * BLOCK_SIZE + TOP_MARGIN
+                        width = FILL_BLOCK * BLOCK_SIZE
+                        height = FILL_BLOCK * BLOCK_SIZE
+                        
                         # Draw outer line
                         pygame.draw.rect(self.screen, BLACK,
                                        (start_x, start_y, width, height), 2)
                         # Draw inner line
                         pygame.draw.rect(self.screen, BLACK,
                                        (start_x + 2, start_y + 2, width - 4, height - 4), 1)
-
-        # Draw placed pieces if in game
-        if self.game_state == GameStatus.IN_GAME.value:
-            logger.debug("Game is IN_GAME state")
-            if hasattr(self, 'game_manager'):
-                logger.debug("Game manager exists")
-                try:
-                    desktop_data = json.loads(self.game_manager.get('Desktop', '[]'))
-                    # logger.debug(f"Desktop data: {desktop_data}")
-                    for y, row in enumerate(desktop_data):
-                        for x, cell in enumerate(row):
-                            if cell and cell.get('owner'):
-                                rect = pygame.Rect(
-                                    x * BLOCK_SIZE,
-                                    TOP_MARGIN + y * BLOCK_SIZE,
-                                    BLOCK_SIZE - 1,
-                                    BLOCK_SIZE - 1
-                                )
-                                pygame.draw.rect(self.screen, WHITE, rect)
-                                if cell.get('building_id'):
-                                    text = self.font.render(str(cell['building_id']), True, BLACK)
-                                    text_rect = text.get_rect(center=rect.center)
-                                    self.screen.blit(text, text_rect)
-                except json.JSONDecodeError as e:
-                    logger.error(f"Error decoding desktop data: {e}")
-                except Exception as e:
-                    logger.error(f"Error drawing board: {e}")
-                    logger.error(traceback.format_exc())
-            else:
-                logger.debug("No game manager available")
+                                       
+            except json.JSONDecodeError as e:
+                logger.error(f"Error decoding desktop data: {e}")
+            except Exception as e:
+                logger.error(f"Error drawing board: {e}")
+                logger.error(traceback.format_exc())
+        else:
+            # Draw empty grid if not in game
+            for y in range(GRID_HEIGHT):
+                for x in range(GRID_WIDTH):
+                    # Draw cell borders
+                    rect = pygame.Rect(
+                        x * BLOCK_SIZE,
+                        TOP_MARGIN + y * BLOCK_SIZE,
+                        BLOCK_SIZE - 1,
+                        BLOCK_SIZE - 1
+                    )
+                    pygame.draw.rect(self.screen, BLACK, rect, 1)
+            
+            # Draw block group borders
+            for block_y in range(BLOCK_COUNT):
+                for block_x in range(BLOCK_COUNT):
+                    # Calculate block group position
+                    start_x = block_x * FILL_BLOCK * BLOCK_SIZE
+                    start_y = block_y * FILL_BLOCK * BLOCK_SIZE + TOP_MARGIN
+                    width = FILL_BLOCK * BLOCK_SIZE
+                    height = FILL_BLOCK * BLOCK_SIZE
+                    
+                    # Draw outer line
+                    pygame.draw.rect(self.screen, BLACK,
+                                   (start_x, start_y, width, height), 2)
+                    # Draw inner line
+                    pygame.draw.rect(self.screen, BLACK,
+                                   (start_x + 2, start_y + 2, width - 4, height - 4), 1)
         
     def draw(self):
         """Draw the game state"""
