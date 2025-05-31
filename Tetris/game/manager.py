@@ -314,13 +314,16 @@ class Manager:
             shapes = self.shape_helper.GetShape(puzzle.shape)
             if shapes is None:
                 logger.error(f"Shape is None. shape: {puzzle.shape}")
+            logger.debug(f"Placing puzzle: ({x}, {y}) - {puzzle.dump()} - {rotate}")
+            logger.debug(f"Placing cells: {shapes}")
             for cell in shapes:   # type: Cell
                 # 计算旋转后的相对坐标
                 rx, ry = rotate_point(cell[0], cell[1], rotate)
-                # 计算实际坐标
-                ax, ay = x + rx, y + ry
+                # 计算实际坐标 地图向下y增加所以需要旋转
+                ax, ay = x + rx, y - ry
+                logger.debug(f"Placing cell: ({rx}, {ry}) -> ({ax}, {ay})")
                 # 设置坐标
-                cell = self.Desktop.GetCell(ax, ay)
+                cell = self.Desktop.GetCell(ay, ax)
                 cell.owner  = player.name
                 cell.terrainType = puzzle.terrainType
                 cell.puzzle_id = puzzle.puzzle_id   

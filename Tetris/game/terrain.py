@@ -74,24 +74,28 @@ class ShapeHelper:
                     else:
                         grid.append([int(x) for x in row.text])
                 
-                # 找到第一个1的位置作为中心点
+                # 先按行后按列找到第一个1的位置作为中心点(0,0)
                 center_x = -1
                 center_y = -1
-                for y, row in enumerate(grid):
-                    for x, cell in enumerate(row):
-                        if cell == 1:
-                            if center_x == -1:  # 找到第一个1
-                                center_x = x
-                                center_y = y
+                found = False
+                for y in range(len(grid)):  # 先遍历行
+                    if found:
+                        break
+                    for x in range(len(grid[y])):  # 再遍历列
+                        if grid[y][x] == 1:
+                            center_x = x
+                            center_y = y
+                            found = True
+                            break
                 
-                # 生成相对坐标
+                # 生成相对坐标（y轴向下为负）
                 cells = []
-                for y, row in enumerate(grid):
-                    for x, cell in enumerate(row):
-                        if cell == 1:
+                for y in range(len(grid)):
+                    for x in range(len(grid[y])):
+                        if grid[y][x] == 1:
                             # 计算相对于中心的偏移
                             rel_x = x - center_x
-                            rel_y = y - center_y
+                            rel_y = center_y - y  # 注意这里是center_y - y，这样向下为负值
                             cells.append((rel_x, rel_y))
                 
                 # 将形状添加到字典中

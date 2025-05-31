@@ -173,39 +173,6 @@ class Client:
                 logger.error(f'Warning: Could not load image for {resource_name}: {e}')
                 images[resource_name] = None
         return images
-
-    def get_shape_matrix(self, shape_name):
-        """Convert shape name to shape matrix"""
-        if not shape_name:
-            logger.error("Shape name is None or empty")
-            return [[1]]  # Default single block
-            
-        logger.debug(f"Converting shape: {shape_name}")
-        
-        # 使用ShapeHelper获取形状
-        shape_helper = ShapeHelper()
-        cells = shape_helper.GetShape(shape_name)
-        
-        if not cells:
-            logger.warning(f"Unknown shape: {shape_name}, using default")
-            return [[1]]  # Default single block
-            
-        # 计算形状的边界
-        min_x = min(x for x, _ in cells)
-        max_x = max(x for x, _ in cells)
-        min_y = min(y for _, y in cells)
-        max_y = max(y for _, y in cells)
-        
-        # 创建网格矩阵
-        width = max_x - min_x + 1
-        height = max_y - min_y + 1
-        matrix = [[0 for _ in range(width)] for _ in range(height)]
-        
-        # 填充矩阵
-        for x, y in cells:
-            matrix[y - min_y][x - min_x] = 1
-            
-        return matrix
     
     def load_terrain_images(self):
         """Load and scale terrain icons"""
@@ -231,48 +198,58 @@ class Client:
                 images[terrain_id] = None
         return images
     
+    def draw_block(self, x, y, terrain_type, alpha=255):
+        """Draw a single block at the specified position with given terrain type"""
+        # Draw terrain image or fallback to gray rectangle
+        terrain_image = self.terrain_images.get(terrain_type)
+        
+        if terrain_image is not None:
+            surface = terrain_image.copy()
+            surface.set_alpha(alpha)
+            self.screen.blit(surface, (x, y))
+        else:
+            pygame.draw.rect(self.screen, (128, 128, 128),
+                           [x, y, BLOCK_SIZE - 1, BLOCK_SIZE - 1])
+    
     def draw_piece(self, piece, x, y, alpha=255):
         """Draw a puzzle piece at the specified position"""
         if not piece or 'shape' not in piece:
             logger.error("Invalid piece or missing shape")
             return
             
-        shape = piece['shape']
-        if not shape:
-            logger.error("Empty shape matrix")
+        # 获取形状的相对坐标
+        shape_helper = ShapeHelper()
+        cells = shape_helper.GetShape(piece['shape'])
+        if not cells:
+            logger.error("Empty shape")
             return
+            
+        # 计算形状的边界
+        min_x = min(x for x, _ in cells)
+        max_x = max(x for x, _ in cells)
+        min_y = min(y for _, y in cells)
+        max_y = max(y for _, y in cells)
+        
+        # 计算形状的尺寸
+        piece_width = (max_x - min_x + 1) * BLOCK_SIZE
+        piece_height = (max_y - min_y + 1) * BLOCK_SIZE
             
         # If drawing a selected piece over the grid, snap to grid
         if self.selected_piece is piece and self.is_mouse_in_grid((x, y)):
             grid_x, grid_y = self.get_grid_pos_from_mouse((x, y))
             # 将鼠标位置调整到中心
-            grid_x -= len(shape[0]) // 2
-            grid_y -= len(shape) // 2
+            grid_x -= piece_width // (2 * BLOCK_SIZE)
+            grid_y -= piece_height // (2 * BLOCK_SIZE)
             x = grid_x * BLOCK_SIZE
             y = grid_y * BLOCK_SIZE + TOP_MARGIN
             
-        # Draw each block of the piece
-        for i, row in enumerate(shape):
-            for j, cell in enumerate(row):
-                if cell:
-                    # Draw terrain image or fallback to gray rectangle
-                    terrain_type = piece.get('terrain', 0)
-                    terrain_image = self.terrain_images.get(terrain_type)
-                    
-                    if terrain_image is not None:
-                        surface = terrain_image.copy()
-                        surface.set_alpha(alpha)
-                        self.screen.blit(surface, (x + j * BLOCK_SIZE, y + i * BLOCK_SIZE))
-                    else:
-                        pygame.draw.rect(self.screen, (128, 128, 128),
-                                       [x + j * BLOCK_SIZE, y + i * BLOCK_SIZE, BLOCK_SIZE - 1, BLOCK_SIZE - 1])
-                    
-                    # Draw building ID if present
-                    # if piece.get('building_id'):
-                    #     block_rect = pygame.Rect(x + j * BLOCK_SIZE, y + i * BLOCK_SIZE, BLOCK_SIZE - 1, BLOCK_SIZE - 1)
-                    #     text = self.font.render(str(piece['building_id']), True, BLACK)
-                    #     text_rect = text.get_rect(center=block_rect.center)
-                    #     self.screen.blit(text, text_rect)
+        # 绘制每个方块
+        for cell_x, cell_y in cells:
+            # 计算实际的绘制位置
+            block_x = x + (cell_x - min_x) * BLOCK_SIZE
+            # 注意这里使用cell_y的负值，因为向下为负
+            block_y = y + (-cell_y - min_y) * BLOCK_SIZE
+            self.draw_block(block_x, block_y, piece.get('terrain', 0), alpha)
     
     def draw_game_board(self):
         """Draw the game grid and placed pieces"""
@@ -346,6 +323,17 @@ class Client:
             # Draw game grid and board pieces
             self.draw_game_board()
             
+            # 如果选中了拼块并且鼠标在网格内，显示网格坐标
+            if self.selected_piece and self.is_mouse_in_grid(self.mouse_pos):
+                grid_x, grid_y = self.get_grid_pos_from_mouse(self.mouse_pos)
+                # 在TOP_MARGIN区域显示坐标
+                coord_text = f"Grid: ({grid_x}, {grid_y})"
+                text_surface = self.font.render(coord_text, True, BLACK)
+                text_rect = text_surface.get_rect()
+                text_rect.centerx = GRID_WIDTH * BLOCK_SIZE // 2
+                text_rect.centery = TOP_MARGIN // 2
+                self.screen.blit(text_surface, text_rect)
+            
             # Draw player slots on the right side
             logger.debug("Drawing player slots...")
             for i in range(PLAYER_SLOTS):
@@ -372,33 +360,49 @@ class Client:
                 logger.debug(f"Toolbar dimensions: width={available_width}, spacing={piece_spacing}")
                 logger.debug(f"Current toolbar pieces: {len(self.toolbar_pieces) if self.toolbar_pieces else 0}")
                 
+                # 初始化ShapeHelper
+                shape_helper = ShapeHelper()
+                
                 # 遍历所有可能的位置
                 for idx in range(max_pieces):
-                    # 如果有对应的piece则绘制
                     if self.toolbar_pieces and idx < len(self.toolbar_pieces):
                         piece = self.toolbar_pieces[idx]
                         if piece and 'shape' in piece and piece['shape']:
-                            # 计算piece的尺寸
-                            piece_width = len(piece['shape'][0]) * BLOCK_SIZE
-                            piece_height = len(piece['shape']) * BLOCK_SIZE
+                            # 获取形状的相对坐标
+                            cells = shape_helper.GetShape(piece['shape'])
+                            if not cells:
+                                continue
+                                
+                            # 计算形状的边界
+                            min_x = min(x for x, _ in cells)
+                            max_x = max(x for x, _ in cells)
+                            min_y = min(y for _, y in cells)
+                            max_y = max(y for _, y in cells)
                             
-                            # 计算piece位置，与get_toolbar_piece_at_pos保持一致
+                            # 计算形状的尺寸
+                            piece_width = (max_x - min_x + 1) * BLOCK_SIZE
+                            piece_height = (max_y - min_y + 1) * BLOCK_SIZE
+                            
+                            # 计算中心位置
                             x = piece_spacing * (idx + 1) - piece_width // 2
+                            # 使用固定的y值使所有拼块在同一水平线上
+                            # 将y值调整为toolbar的中心，并考虑形状的高度
                             y = toolbar_y + (TOOLBAR_HEIGHT - piece_height) // 2
                             
-                            # logger.debug(f"Drawing piece {idx}:")
-                            # logger.debug(f"  - Position: ({x}, {y})")
-                            # logger.debug(f"  - Dimensions: {piece_width}x{piece_height}")
-                            # logger.debug(f"  - Shape: {piece['shape']}")
-                            # logger.debug(f"  - Valid: {piece.get('is_valid', True)}")
-                            
-                            if piece.get('is_valid', True):
-                                self.draw_piece(piece, x, y)
-                            else:
-                                self.draw_piece(piece, x, y, alpha=128)
+                            # 绘制每个方块
+                            for cell_x, cell_y in cells:
+                                # 计算实际的绘制位置
+                                block_x = x + (cell_x - min_x) * BLOCK_SIZE
+                                # 注意这里使用cell_y的负值，因为向下为负
+                                block_y = y + (-cell_y - min_y) * BLOCK_SIZE
+                                
+                                # 绘制单个方块
+                                if piece.get('is_valid', True):
+                                    self.draw_block(block_x, block_y, piece.get('terrain', 1))
+                                else:
+                                    self.draw_block(block_x, block_y, piece.get('terrain', 1), alpha=128)
                     else:
                         logger.debug(f"No piece for grid {idx}")
-                    # logger.debug("No toolbar pieces to draw")
             
             # Draw buttons based on game state
             if self.game_state == GameStatus.IN_GAME.value:
@@ -540,11 +544,25 @@ class Client:
         max_pieces = max(5, len(self.toolbar_pieces))  # 至少预留5个位置
         piece_spacing = available_width // (max_pieces + 1)
 
+        # 初始化ShapeHelper
+        shape_helper = ShapeHelper()
+
         # Check each piece
         for idx, piece in enumerate(self.toolbar_pieces):
-            # Calculate piece dimensions
-            piece_width = len(piece['shape'][0]) * BLOCK_SIZE
-            piece_height = len(piece['shape']) * BLOCK_SIZE
+            # 获取形状的相对坐标
+            cells = shape_helper.GetShape(piece['shape'])
+            if not cells:
+                continue
+                
+            # 计算形状的边界
+            min_x = min(x for x, _ in cells)
+            max_x = max(x for x, _ in cells)
+            min_y = min(y for _, y in cells)
+            max_y = max(y for _, y in cells)
+            
+            # 计算形状的尺寸
+            piece_width = (max_x - min_x + 1) * BLOCK_SIZE
+            piece_height = (max_y - min_y + 1) * BLOCK_SIZE
             
             # Calculate piece position
             piece_x = piece_spacing * (idx + 1) - piece_width // 2
@@ -559,8 +577,8 @@ class Client:
 
     def get_grid_pos_from_mouse(self, pos):
         """Convert mouse position to grid coordinates"""
-        x = pos[0] // BLOCK_SIZE
-        y = (pos[1] - TOP_MARGIN) // BLOCK_SIZE
+        x = max(0, min(pos[0] // BLOCK_SIZE, GRID_WIDTH - 1))
+        y = max(0, min((pos[1] - TOP_MARGIN) // BLOCK_SIZE, GRID_HEIGHT - 1))
         return x, y
 
     def is_mouse_in_grid(self, pos):
@@ -605,43 +623,61 @@ class Client:
 
         # 保存原始形状用于计算旋转次数
         if 'original_shape' not in piece:
-            piece['original_shape'] = [row[:] for row in piece['shape']]
+            piece['original_shape'] = piece['shape']
 
-        # Create a new rotated shape matrix
-        old_shape = piece['shape']
-        rows = len(old_shape)
-        cols = len(old_shape[0])
-        new_shape = [[0 for _ in range(rows)] for _ in range(cols)]
+        # 获取当前形状的相对坐标
+        shape_helper = ShapeHelper()
+        cells = shape_helper.GetShape(piece['shape'])
+        if not cells:
+            return piece
 
-        for i in range(rows):
-            for j in range(cols):
-                new_shape[j][rows - 1 - i] = old_shape[i][j]
+        # 顿时针旋转90度
+        # 对于每个点(x,y)，旋转后的坐标为(y,-x)
+        rotated_cells = [(y, -x) for x, y in cells]
 
-        piece['shape'] = new_shape
+        # 找到对应的形状名称
+        # 如果是I形状，从水平变垂直或从垂直变水平
+        if piece['shape'] == 'I':
+            piece['shape'] = 'I_vertical' if piece['shape'] == 'I' else 'I'
+        # 如果是Z形状，从水平变垂直或从垂直变水平
+        elif piece['shape'] == 'Z':
+            piece['shape'] = 'Z_vertical' if piece['shape'] == 'Z' else 'Z'
+        # 如果是S形状，从水平变垂直或从垂直变水平
+        elif piece['shape'] == 'S':
+            piece['shape'] = 'S_vertical' if piece['shape'] == 'S' else 'S'
+        # 其他形状保持不变
+
         return piece
 
     def calculate_rotation_count(self, original_shape, current_shape):
-        """计算从原始形状到当前形状需要顺时针旋转的次数"""
-        temp_shape = [row[:] for row in original_shape]
-        for i in range(4):  # 最多旋转4次
-            if temp_shape == current_shape:
-                return i
-            # 继续旋转
-            rows = len(temp_shape)
-            cols = len(temp_shape[0])
-            new_shape = [[0 for _ in range(rows)] for _ in range(cols)]
-            for r in range(rows):
-                for c in range(cols):
-                    new_shape[c][rows - 1 - r] = temp_shape[r][c]
-            temp_shape = new_shape
-        return 0  # 如果没找到匹配，返回0
+        """计算从原始形状到当前形状需要顿时针旋转的次数"""
+        # 对于使用形状名称的方式，我们只需要判断是否需要旋转
+        # 如果是 I/Z/S 形状，只有两种状态，返回0或1
+        if original_shape in ['I', 'I_vertical', 'Z', 'Z_vertical', 'S', 'S_vertical']:
+            return 1 if original_shape != current_shape else 0
+        # 其他形状保持不变
+        return 0
 
     def place_piece(self, puzzle_id, rotate):
         """放置棋子并发送消息到服务器"""
         grid_x, grid_y = self.get_grid_pos_from_mouse(self.mouse_pos)
-        # 调整网格位置，考虑到棋子的中心点
-        grid_x -= len(self.selected_piece['shape'][0]) // 2
-        grid_y -= len(self.selected_piece['shape']) // 2
+        
+        # 获取形状的相对坐标
+        shape_helper = ShapeHelper()
+        cells = shape_helper.GetShape(self.selected_piece['shape'])
+        if not cells:
+            return
+            
+        # 计算形状的边界
+        min_x = min(x for x, _ in cells)
+        max_x = max(x for x, _ in cells)
+        min_y = min(y for _, y in cells)
+        max_y = max(y for _, y in cells)
+        
+        # 计算形状的尺寸
+        piece_width = (max_x - min_x + 1)
+        piece_height = (max_y - min_y + 1)
+        
         logger.debug(f"Placing piece at ({grid_x}, {grid_y}) with rotation {rotate}")
         # 发送放置消息
         self.sendMessage(
@@ -809,7 +845,7 @@ class Client:
                                             for puzzle_id, puzzle_info in puzzles_data.items():
                                                 piece = {
                                                     'id': puzzle_id,
-                                                    'shape': self.get_shape_matrix(puzzle_info.get('shape', None)),
+                                                    'shape': puzzle_info.get('shape', None),
                                                     'terrain': puzzle_info.get('terrainType', None),
                                                     'building_id': puzzle_info.get('building_id', None),
                                                     'is_valid': True
