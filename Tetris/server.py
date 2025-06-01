@@ -166,6 +166,8 @@ class LobbyServicer(rpc.LobbyServicer):
                         self.gm.PlayerRemovePuzzle(player, puzzle_id)
                         # 抽取新的拼块
                         self.PlayerDrawToLimit(player)
+                        self.next_player()
+                        self._broadcast()
                         resp['msg'] = f'{sender} placed puzzle {puzzle_id} at ({x}, {y}) with rotation {rotate}'
                     else:
                         resp['msg'] = 'Failed to place puzzle'

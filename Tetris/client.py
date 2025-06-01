@@ -734,7 +734,6 @@ class Client:
         )        
         if resp.status == SystemResponse.OK.value:
             resp = self.sendMessage(PlayerAction.EndTurn.value, self.username)
-            # TODO: 结束回合的玩家可能没有正确刷新界面
 
     def run(self):
         """Main game loop"""
