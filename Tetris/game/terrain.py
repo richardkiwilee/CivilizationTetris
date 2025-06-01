@@ -160,7 +160,7 @@ class Puzzle:
         self.x = None   # 中心坐标x
         self.y = None   # 中心坐标y
         self.rotation = None   # 旋转角度
-
+        self.owner = None   # 拼块所有者
         self.terrainType = Terrain.Unknown.value   # 地形类型
         self.shape = None   # 形状        
         self.building_id = None   # 建筑id 如果是None则表示这个拼块不是一个建筑

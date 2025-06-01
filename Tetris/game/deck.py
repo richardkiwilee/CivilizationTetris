@@ -28,10 +28,11 @@ class Deck:
         self.terrain_discard_pile = list()
         self.building_draw_pile = list()
         self.building_discard_pile = list()
+        self.index = 0
         self.init()
 
     def init(self):
-        index = 1
+        self.index = 1
         config_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data', 'Buildings.xml')
         try:
             tree = ET.parse(config_path)
@@ -45,7 +46,7 @@ class Deck:
                 
                 for i in range(count):
                     puzzle = Puzzle()
-                    puzzle.puzzle_id = index
+                    puzzle.puzzle_id = self.index
                     puzzle.x = None
                     puzzle.y = None
                     puzzle.rotation = None
@@ -56,14 +57,14 @@ class Deck:
                     puzzle.army = 0
                     puzzle.army_owner = None
                     self.building_draw_pile.append(puzzle)
-                    index += 1
+                    self.index += 1
         except Exception as e:
             print(f"Error reading building config: {e}")
         for terrain in self.setting['TerrainRatio'].keys():
             for _shape in ['I', 'J', 'L', 'O', 'S', 'T', 'Z']:
                 shape = ShapeHelper().GetShape(_shape)
                 puzzle = Puzzle()
-                puzzle.puzzle_id = index
+                puzzle.puzzle_id = self.index
                 puzzle.x = None
                 puzzle.y = None
                 puzzle.rotation = None
@@ -74,7 +75,7 @@ class Deck:
                 puzzle.army = None
                 puzzle.army_owner = None
                 self.terrain_draw_pile.append(puzzle)
-                index += 1
+                self.index += 1
         random.shuffle(self.building_draw_pile)
         random.shuffle(self.terrain_draw_pile)
 

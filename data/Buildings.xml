@@ -1,6 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Buildings>
-    
+    <Building id="999" Count="0" Name="大本营" shape="O" tags="Special,Unique,Nobility" ArmyType="Range" ArmyCount="50/100/150/200">
+        <Cost>
+            <Resource Type="Wood" Amount="0/0/0/0"/>
+            <Resource Type="Food" Amount="0/400/1200/2400"/>
+            <Resource Type="Gold" Amount="0/200/600/1200"/>
+            <Resource Type="Stone" Amount="0/0/0/0"/>
+        </Cost>
+    </Building>
+
     <Building id="0" Count="10" Name="雇佣兵营地" shape="L" tags="Military" ArmyType="Heavy" ArmyCount="15">
         <Cost>
             <Resource Type="Food" Amount="150"/>

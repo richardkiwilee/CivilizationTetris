@@ -20,7 +20,7 @@ import threading
 
 queues = []
 # 配置日志记录器
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('server')
 logger.setLevel(logging.DEBUG)
 # 创建控制台处理器
 console_handler = logging.StreamHandler()

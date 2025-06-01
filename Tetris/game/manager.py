@@ -82,6 +82,61 @@ class Manager:
                 self.PlayerDrawBuilding(player)
             for i in range(0, 2):
                 self.PlayerDrawTerrain(player)
+        self.PlaceBaseCamp()
+
+    def GetBaseCampPostition(self):
+        rows = self.Desktop.rows
+        cols = self.Desktop.cols
+        
+        if len(self.players) == 1:
+            # Center position for single player
+            return [(rows // 2, cols // 2)]
+        
+        if len(self.players) == 2:
+            # Diagonal corners for 2 players
+            return [(0, 0), (rows - 1, cols - 1)]
+        
+        if len(self.players) == 3:
+            # Triangle formation for 3 players
+            return [
+                (0, 0),                    # Top left
+                (rows - 1, cols // 2),      # Bottom middle
+                (0, cols - 1)               # Top right
+            ]
+        
+        if len(self.players) == 4:
+            # All corners for 4 players
+            return [
+                (0, 0),           # Top left
+                (0, cols - 1),     # Top right
+                (rows - 1, 0),     # Bottom left
+                (rows - 1, cols - 1)# Bottom right
+            ]
+        logger.error("Invalid player count: " + str(len(self.players)))
+        return []
+
+    def PlaceBaseCamp(self):
+        positions = self.GetBaseCampPostition()
+        logger.info("Base camp positions: " + str(positions))
+        for player in self.players.values():
+            pos = positions.pop()
+            building = self.BuildingFactory.GetBuildingById(999)
+            print(building) # {'id': 999, 'name': '大本营', 'shape': ((0, 0), (1, 0), (0, -1), (1, -1)), 'tags': ['Special', 'Unique', 'Nobility'], 'cost': {0: {}, 1: {1: 400, 0: 200}, 2: {1: 1200, 0: 600}}}
+            puzzle = Puzzle()
+            puzzle.puzzle_id = self.puzzle_deck.index   
+            puzzle.rotation = 0
+            puzzle.terrainType = Terrain.Building.value
+            puzzle.shape = 'O'
+            puzzle.building_id = 999
+            puzzle.building_level = 0
+            puzzle.army = 50
+            puzzle.army_owner = player.name
+            
+            
+            
+            self.puzzle_deck.index += 1
+            self.puzzle_objs[puzzle.puzzle_id] = puzzle
+            self.Place(player, pos[0], pos[1], puzzle)
 
     def GetPuzzle(self, x, y) -> Optional[Puzzle]:
         if self.Desktop is None:
@@ -348,10 +403,12 @@ class Manager:
 
     def PlayerDraw(self, player: Player):
         puzzle = self.puzzle_deck.Draw()
+        puzzle.owner = player.name
         player.puzzles[puzzle.puzzle_id] = puzzle
 
     def PlayerDrawBuilding(self, player: Player):
         puzzle = self.puzzle_deck.DrawBuilding()
+        puzzle.owner = player.name
         player.puzzles[puzzle.puzzle_id] = puzzle
 
     def PlayerDrawTerrain(self, player: Player):
@@ -362,7 +419,8 @@ class Manager:
         try:
             player.puzzles.pop(puzzle_id)
         except KeyError:
-            print(f"Player {player.name} remove puzzle: PuzzleId {puzzle_id} not found")        
+            logger.error(f"Player {player.name} remove puzzle: PuzzleId {puzzle_id} not found")        
+            traceback.print_exc()
 
 
 if __name__ == '__main__':
