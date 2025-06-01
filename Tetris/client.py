@@ -45,7 +45,7 @@ FILL_BLOCK = 7  # 定义 FILL_BLOCK * FILL_BLOCK是一个正方形的小分组
 BLOCK_COUNT = 4  # 定义每行和每列有多少个 FILL_BLOCK
 GRID_WIDTH = BLOCK_COUNT * FILL_BLOCK
 GRID_HEIGHT = BLOCK_COUNT * FILL_BLOCK
-TOOLBAR_HEIGHT = 100  # Height of the bottom toolbar
+TOOLBAR_HEIGHT = 150  # Height of the bottom toolbar
 TOP_MARGIN = 50  # Height of top margin
 
 # UI Constants
@@ -268,13 +268,7 @@ class Client:
                                 self.screen.blit(img, 
                                                 (x * BLOCK_SIZE, 
                                                  y * BLOCK_SIZE + TOP_MARGIN))
-                        
-                        # Draw building ID if exists
-                        if cell and cell.get('building_id'):
-                            text = self.font.render(str(cell['building_id']), True, BLACK)
-                            text_rect = text.get_rect(center=rect.center)
-                            self.screen.blit(text, text_rect)
-                            
+                                                    
                 # Draw block group borders
                 for block_y in range(BLOCK_COUNT):
                     for block_x in range(BLOCK_COUNT):
@@ -420,14 +414,30 @@ class Client:
             
             # Draw buttons based on game state
             if self.game_state == GameStatus.IN_GAME.value:
-                # Draw EndTurn button in game
+                # Draw ChangeBuilding button
                 button_x = SCREEN_WIDTH - BUTTON_WIDTH - BUTTON_MARGIN
-                button_y = SCREEN_HEIGHT - BUTTON_HEIGHT - BUTTON_MARGIN
-                end_turn_button = {
-                    'text': 'EndTurn',
+                button_y = SCREEN_HEIGHT - 2 * BUTTON_HEIGHT - 2 * BUTTON_MARGIN
+                change_building_button = {
+                    'text': '更换建筑',
                     'rect': pygame.Rect(button_x, button_y, BUTTON_WIDTH, BUTTON_HEIGHT)
                 }
                 
+                # Draw EndTurn button
+                button_x = SCREEN_WIDTH - BUTTON_WIDTH - BUTTON_MARGIN
+                button_y = SCREEN_HEIGHT - BUTTON_HEIGHT - BUTTON_MARGIN
+                end_turn_button = {
+                    'text': '结束回合',
+                    'rect': pygame.Rect(button_x, button_y, BUTTON_WIDTH, BUTTON_HEIGHT)
+                }
+                
+                # Draw ChangeBuilding button
+                pygame.draw.rect(self.screen, WHITE, change_building_button['rect'])
+                pygame.draw.rect(self.screen, BLACK, change_building_button['rect'], 1)
+                text = self.font.render(change_building_button['text'], True, BLACK)
+                text_rect = text.get_rect(center=change_building_button['rect'].center)
+                self.screen.blit(text, text_rect)
+
+                # Draw EndTurn button
                 pygame.draw.rect(self.screen, WHITE, end_turn_button['rect'])
                 pygame.draw.rect(self.screen, BLACK, end_turn_button['rect'], 1)
                 text = self.font.render(end_turn_button['text'], True, BLACK)
@@ -435,7 +445,7 @@ class Client:
                 self.screen.blit(text, text_rect)
                 
                 # Update buttons list for click handling
-                self.buttons = [end_turn_button]
+                self.buttons = [change_building_button, end_turn_button]
             else:
                 # Draw Ready/Start button in lobby
                 for button in self.buttons:
@@ -530,15 +540,21 @@ class Client:
             self.screen.blit(empty_text, text_rect)
 
     def handle_button_click(self, pos):
-        """Handle button clicks"""
+        # 检查所有按钮的点击
         for button in self.buttons:
             if button['rect'].collidepoint(pos):
-                if button['text'] == 'Ready':
-                    self.sendMessage(PlayerAction.Ready.value, self.username)
-                elif button['text'] == 'Start':
-                    self.sendMessage(PlayerAction.StartGame.value, self.username)
-                elif button['text'] == 'EndTurn':
-                    self.sendMessage(PlayerAction.EndTurn.value, self.username)
+                if self.game_state == GameStatus.LOBBY.value:
+                    # 处理大厅中的按钮
+                    if button['text'] == 'Ready':
+                        self.sendMessage(PlayerAction.Ready.value, self.username, None, None, None, None)
+                    elif button['text'] == 'Start':
+                        self.sendMessage(PlayerAction.StartGame.value, self.username, None, None, None, None)
+                else:
+                    # 处理游戏中的按钮
+                    if button['text'] == '更换建筑':
+                        self.sendMessage(PlayerAction.ChangeCard.value, self.username, None, None, None, None)
+                    elif button['text'] == '结束回合':
+                        self.sendMessage(PlayerAction.EndTurn.value, self.username, None, None, None, None)
                 break
 
     def is_mouse_in_toolbar(self, pos):

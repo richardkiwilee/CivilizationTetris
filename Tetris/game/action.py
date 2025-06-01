@@ -16,4 +16,5 @@ class PlayerAction(Enum):
     Upgrade = 8         # 仅游戏内可用 升级一个建筑
     Attack = 9          # 仅游戏内可用 发起进攻
     Sync = 10           # 强制同步游戏状态
-
+    ChangeCard = 11     # 仅游戏内可用 交换牌
+    

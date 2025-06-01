@@ -180,6 +180,18 @@ class LobbyServicer(rpc.LobbyServicer):
                 self._broadcast()
                 return self._response(SystemResponse.OK, resp)
 
+            if action == PlayerAction.ChangeCard.value:
+                player = self.gm.players[sender]
+                for puzzle_id, puzzle in list(player.puzzles.items()):
+                    if puzzle.building_id is not None:
+                        cost = self.gm.BuildingFactory.GetCostById(puzzle.building_id, 0)
+                        if not player.ResourceEnough(cost):
+                            # Remove the puzzle and draw a terrain puzzle instead
+                            self.gm.PlayerRemovePuzzle(player, puzzle_id)
+                            self.gm.PlayerDrawTerrain(player)
+                            logger.info(f"Player {sender} changed building card to terrain due to insufficient resources")
+                self._broadcast()
+                return self._response(SystemResponse.OK, resp)
             
             if action == PlayerAction.Active.value:
                 self._broadcast()
