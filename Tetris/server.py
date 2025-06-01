@@ -170,6 +170,7 @@ class LobbyServicer(rpc.LobbyServicer):
                     else:
                         resp['msg'] = 'Failed to place puzzle'
                         logger.error(f'Failed to place puzzle {puzzle_id} at ({x}, {y}) with rotation {rotate}')
+                        self._broadcast()
                         return self._response(SystemResponse.ERROR, resp)
                 except Exception as e:
                     logger.error(f'Error in Place action: {e}')

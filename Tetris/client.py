@@ -480,7 +480,8 @@ class Client:
             # Draw player name
             name = player_data.get('name', 'Unknown')
             if self.game_state == GameStatus.IN_GAME.value:
-                pass
+                if player_data.get('current', False):
+                    name += ' (Current Player)'
             if self.game_state == GameStatus.LOBBY.value:
                 if player_data.get('ready', False):
                     name += ' (Ready)'
@@ -723,16 +724,17 @@ class Client:
         
         logger.debug(f"Placing piece at ({grid_x}, {grid_y}) with rotation {rotate}")
         # 发送放置消息
-        self.sendMessage(
+        resp = self.sendMessage(
             PlayerAction.Place.value,
             self.username,
             str(puzzle_id),
             str(grid_x),
             str(grid_y),
             str(rotate)
-        )
-        # 结束回合
-        self.sendMessage(PlayerAction.EndTurn.value, self.username)
+        )        
+        if resp.status == SystemResponse.OK.value:
+            resp = self.sendMessage(PlayerAction.EndTurn.value, self.username)
+            # TODO: 结束回合的玩家可能没有正确刷新界面
 
     def run(self):
         """Main game loop"""
@@ -771,6 +773,8 @@ class Client:
                                             self.place_piece(piece_id, rotate_count)
                                         except Exception as e:
                                             logger.error(f"Failed to place piece: {e}")
+                                        finally:
+                                            self.needs_redraw = True
                                         
                                         # 取消选中状态
                                         self.selected_piece = None
@@ -874,6 +878,8 @@ class Client:
                                 # 强制刷新界面
                                 self.needs_redraw = True
                             if data['status'] == GameStatus.IN_GAME.value:
+                                current_player_index = data['current_player_index']
+                                current_player_name = data['players'][current_player_index]
                                 logger.debug(f'Receive IN_GAME Message: {data.keys()}')
                                 # 保存游戏管理器状态
                                 if 'manager' in data and 'players' in data['manager']:
@@ -895,7 +901,8 @@ class Client:
                                                         self.players[i] = {
                                                             'name': player_name,
                                                             'resources': player_info.get('resources', {}),
-                                                            'ready': True  # In game, all players are ready
+                                                            'ready': True,  # In game, all players are ready
+                                                            'current': player_name == current_player_name
                                                         }
                                         
                                         # Update the game state first
