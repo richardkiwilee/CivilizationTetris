@@ -165,7 +165,7 @@ class LobbyServicer(rpc.LobbyServicer):
                         # 放置成功，移除玩家手中的拼块
                         self.gm.PlayerRemovePuzzle(player, puzzle_id)
                         # 抽取新的拼块
-                        self.gm.PlayerDraw(player)
+                        self.PlayerDrawToLimit(player)
                         resp['msg'] = f'{sender} placed puzzle {puzzle_id} at ({x}, {y}) with rotation {rotate}'
                     else:
                         resp['msg'] = 'Failed to place puzzle'
@@ -188,8 +188,7 @@ class LobbyServicer(rpc.LobbyServicer):
                         if not player.ResourceEnough(cost):
                             # Remove the puzzle and draw a terrain puzzle instead
                             self.gm.PlayerRemovePuzzle(player, puzzle_id)
-                            self.gm.PlayerDrawTerrain(player)
-                            logger.info(f"Player {sender} changed building card to terrain due to insufficient resources")
+                self.PlayerDrawTerrainToLimit(player)
                 self._broadcast()
                 return self._response(SystemResponse.OK, resp)
             
@@ -208,6 +207,14 @@ class LobbyServicer(rpc.LobbyServicer):
         self._broadcast()
         resp['msg'] = 'Unexpect response'
         return self._response(SystemResponse.ERROR, resp)
+
+    def PlayerDrawTerrainToLimit(self, player, limit=5):
+        while len(player.puzzles) < limit:
+            self.gm.PlayerDrawTerrain(player)
+
+    def PlayerDrawToLimit(self, player, limit=5):
+        while len(player.puzzles) < limit:
+            self.gm.PlayerDraw(player)
 
     def get_current_player(self):
         """获取当前回合的玩家"""

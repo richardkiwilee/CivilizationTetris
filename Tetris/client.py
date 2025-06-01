@@ -410,7 +410,7 @@ class Client:
                                 else:
                                     self.draw_block(block_x, block_y, piece.get('terrain', 1), alpha=128)
                     else:
-                        logger.debug(f"No piece for grid {idx}")
+                        logger.error(f"No piece for grid {idx}")
             
             # Draw buttons based on game state
             if self.game_state == GameStatus.IN_GAME.value:
@@ -871,6 +871,8 @@ class Client:
                                     # Check if all players are ready
                                     all_ready = all(is_ready for is_ready in data['ready_status'].values())
                                     self.buttons[0]['text'] = 'Start' if all_ready else 'Ready'
+                                # 强制刷新界面
+                                self.needs_redraw = True
                             if data['status'] == GameStatus.IN_GAME.value:
                                 logger.debug(f'Receive IN_GAME Message: {data.keys()}')
                                 # 保存游戏管理器状态
