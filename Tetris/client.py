@@ -479,8 +479,13 @@ class Client:
         if player_data:
             # Draw player name
             name = player_data.get('name', 'Unknown')
-            if player_data.get('ready', False):
-                name += ' (Ready)'
+            if self.game_state == GameStatus.IN_GAME.value:
+                pass
+            if self.game_state == GameStatus.LOBBY.value:
+                if player_data.get('ready', False):
+                    name += ' (Ready)'
+                else:
+                    name += ' (Waiting)'
             name_font = pygame.font.Font(None, 24)
             name_text = name_font.render(name, True, BLACK)
             self.screen.blit(name_text, (x + 5, y + 5))
@@ -944,6 +949,34 @@ class Client:
                     'resources': data.get('resources', {}),
                     'ready': data.get('ready', False)
                 }
+
+        # 检查是否所有玩家都准备好了
+        all_ready = True
+        for player in self.players.values():
+            if player and not player.get('ready', False):
+                all_ready = False
+                break
+
+        # 更新按钮状态
+        if self.game_state == GameStatus.LOBBY.value:
+            # 获取当前玩家的状态
+            current_player = next((p for p in self.players.values() if p and p['name'] == self.username), None)
+            is_host = self.username == next(iter(users_data.keys()))
+            
+            # 更新按钮
+            if is_host and all_ready and len(users_data) > 1:
+                self.buttons = [{'text': 'Start', 'rect': pygame.Rect(
+                    BLOCK_SIZE * GRID_WIDTH + (PLAYER_SLOT_WIDTH - BUTTON_WIDTH) // 2,
+                    SCREEN_HEIGHT - TOOLBAR_HEIGHT + 20,
+                    BUTTON_WIDTH, BUTTON_HEIGHT
+                )}]
+            else:
+                ready_status = current_player.get('ready', False)
+                self.buttons = [{'text': 'Ready' if not ready_status else 'Waiting...', 'rect': pygame.Rect(
+                    BLOCK_SIZE * GRID_WIDTH + (PLAYER_SLOT_WIDTH - BUTTON_WIDTH) // 2,
+                    SCREEN_HEIGHT - TOOLBAR_HEIGHT + 20,
+                    BUTTON_WIDTH, BUTTON_HEIGHT
+                )}]
 
         # Ensure current player is always in slot 0
         for i, player in self.players.items():
