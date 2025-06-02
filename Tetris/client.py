@@ -118,7 +118,9 @@ class Client:
         self.players = {}
         self.toolbar_pieces = []
         self.needs_redraw = False
-        
+        self.current_player_index = 0
+        self.current_player_name = ""
+
         # Button setup
         button_x = BLOCK_SIZE * GRID_WIDTH + (PLAYER_SLOT_WIDTH - BUTTON_WIDTH) // 2
         self.buttons = [
@@ -450,38 +452,43 @@ class Client:
             
             # Draw buttons based on game state
             if self.game_state == GameStatus.IN_GAME.value:
-                # Draw ChangeBuilding button
-                button_x = SCREEN_WIDTH - BUTTON_WIDTH - BUTTON_MARGIN
-                button_y = SCREEN_HEIGHT - 2 * BUTTON_HEIGHT - 2 * BUTTON_MARGIN
-                change_building_button = {
-                    'text': '更换建筑',
-                    'rect': pygame.Rect(button_x, button_y, BUTTON_WIDTH, BUTTON_HEIGHT)
-                }
-                
-                # Draw EndTurn button
-                button_x = SCREEN_WIDTH - BUTTON_WIDTH - BUTTON_MARGIN
-                button_y = SCREEN_HEIGHT - BUTTON_HEIGHT - BUTTON_MARGIN
-                end_turn_button = {
-                    'text': '结束回合',
-                    'rect': pygame.Rect(button_x, button_y, BUTTON_WIDTH, BUTTON_HEIGHT)
-                }
-                
-                # Draw ChangeBuilding button
-                pygame.draw.rect(self.screen, WHITE, change_building_button['rect'])
-                pygame.draw.rect(self.screen, BLACK, change_building_button['rect'], 1)
-                text = self.font.render(change_building_button['text'], True, BLACK)
-                text_rect = text.get_rect(center=change_building_button['rect'].center)
-                self.screen.blit(text, text_rect)
+                # Only show buttons if it's the current player's turn
+                if self.current_player_name == self.username:
+                    # Draw ChangeBuilding button
+                    button_x = SCREEN_WIDTH - BUTTON_WIDTH - BUTTON_MARGIN
+                    button_y = SCREEN_HEIGHT - 2 * BUTTON_HEIGHT - 2 * BUTTON_MARGIN
+                    change_building_button = {
+                        'text': '更换建筑',
+                        'rect': pygame.Rect(button_x, button_y, BUTTON_WIDTH, BUTTON_HEIGHT)
+                    }
+                    
+                    # Draw EndTurn button
+                    button_x = SCREEN_WIDTH - BUTTON_WIDTH - BUTTON_MARGIN
+                    button_y = SCREEN_HEIGHT - BUTTON_HEIGHT - BUTTON_MARGIN
+                    end_turn_button = {
+                        'text': '结束回合',
+                        'rect': pygame.Rect(button_x, button_y, BUTTON_WIDTH, BUTTON_HEIGHT)
+                    }
+                    
+                    # Draw ChangeBuilding button
+                    pygame.draw.rect(self.screen, WHITE, change_building_button['rect'])
+                    pygame.draw.rect(self.screen, BLACK, change_building_button['rect'], 1)
+                    text = self.font.render(change_building_button['text'], True, BLACK)
+                    text_rect = text.get_rect(center=change_building_button['rect'].center)
+                    self.screen.blit(text, text_rect)
 
-                # Draw EndTurn button
-                pygame.draw.rect(self.screen, WHITE, end_turn_button['rect'])
-                pygame.draw.rect(self.screen, BLACK, end_turn_button['rect'], 1)
-                text = self.font.render(end_turn_button['text'], True, BLACK)
-                text_rect = text.get_rect(center=end_turn_button['rect'].center)
-                self.screen.blit(text, text_rect)
-                
-                # Update buttons list for click handling
-                self.buttons = [change_building_button, end_turn_button]
+                    # Draw EndTurn button
+                    pygame.draw.rect(self.screen, WHITE, end_turn_button['rect'])
+                    pygame.draw.rect(self.screen, BLACK, end_turn_button['rect'], 1)
+                    text = self.font.render(end_turn_button['text'], True, BLACK)
+                    text_rect = text.get_rect(center=end_turn_button['rect'].center)
+                    self.screen.blit(text, text_rect)
+                    
+                    # Update buttons list for click handling
+                    self.buttons = [change_building_button, end_turn_button]
+                else:
+                    # Clear buttons list if it's not current player's turn
+                    self.buttons = []
             else:
                 # Draw Ready/Start button in lobby
                 for button in self.buttons:
@@ -913,8 +920,8 @@ class Client:
                                 # 强制刷新界面
                                 self.needs_redraw = True
                             if data['status'] == GameStatus.IN_GAME.value:
-                                current_player_index = data['current_player_index']
-                                current_player_name = data['players'][current_player_index]
+                                self.current_player_index = data['current_player_index']
+                                self.current_player_name = data['players'][self.current_player_index]
                                 logger.debug(f'Receive IN_GAME Message: {data.keys()}')
                                 # 保存游戏管理器状态
                                 if 'manager' in data and 'players' in data['manager']:
@@ -937,7 +944,7 @@ class Client:
                                                             'name': player_name,
                                                             'resources': player_info.get('resources', {}),
                                                             'ready': True,  # In game, all players are ready
-                                                            'current': player_name == current_player_name
+                                                            'current': player_name == self.current_player_name
                                                         }
                                         
                                         # Update the game state first
@@ -962,12 +969,24 @@ class Client:
                                             for piece in self.toolbar_pieces:
                                                 logger.debug(f"Piece: {piece}")
                                         
-                                        # Update button text based on game state
-                                        self.buttons[0]['text'] = 'EndTurn'
-                                        
-                                        # 只设置重绘标志，让主循环处理重绘
-                                        self.needs_redraw = True
-                                        # logger.debug("Set needs_redraw to True")
+                                        # Initialize game buttons if needed
+                                        if self.current_player_name == self.username:
+                                            button_x = SCREEN_WIDTH - BUTTON_WIDTH - BUTTON_MARGIN
+                                            button_y = SCREEN_HEIGHT - 2 * BUTTON_HEIGHT - 2 * BUTTON_MARGIN
+                                            change_building_button = {
+                                                'text': '更换建筑',
+                                                'rect': pygame.Rect(button_x, button_y, BUTTON_WIDTH, BUTTON_HEIGHT)
+                                            }
+                                            
+                                            button_y = SCREEN_HEIGHT - BUTTON_HEIGHT - BUTTON_MARGIN
+                                            end_turn_button = {
+                                                'text': '结束回合',
+                                                'rect': pygame.Rect(button_x, button_y, BUTTON_WIDTH, BUTTON_HEIGHT)
+                                            }
+                                            self.buttons = [change_building_button, end_turn_button]
+                                        else:
+                                            self.buttons = []
+                                    self.needs_redraw = True
                     except json.JSONDecodeError:
                         logger.error('Error decoding message:', message.body)
                         traceback.print_exc()
