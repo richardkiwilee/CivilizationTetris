@@ -2,6 +2,11 @@ from enum import Enum
 from configparser import ConfigParser
 import os
 import xml.etree.ElementTree as ET
+try:
+    from Tetris.game.player import PlayerResource
+except:
+    from player import PlayerResource
+
 
 class Rotate(Enum):
     Zero = 0

@@ -16,7 +16,8 @@ from Tetris.game.manager import Manager
 from concurrent.futures import ThreadPoolExecutor
 from Tetris.game.action import *
 import threading
-
+from Tetris.game.terrain import Terrain
+from Tetris.game.player import PlayerResource
 
 queues = []
 # 配置日志记录器
@@ -164,6 +165,18 @@ class LobbyServicer(rpc.LobbyServicer):
                     if self.gm.Place(player, x, y, puzzle, rotate):
                         # 放置成功，移除玩家手中的拼块
                         self.gm.PlayerRemovePuzzle(player, puzzle_id)
+                        add_resource_cnt = len(self.gm.shape_helper.GetShape(puzzle.shape))
+                        if puzzle.building_id is None:
+                            if puzzle.terrainType == Terrain.Plain.value:
+                                player.AddResource(PlayerResource.Food, add_resource_cnt)
+                            elif puzzle.terrainType == Terrain.Forest.value:
+                                player.AddResource(PlayerResource.Wood, add_resource_cnt)
+                            elif puzzle.terrainType == Terrain.River.value:
+                                player.AddResource(PlayerResource.Food, add_resource_cnt)
+                            elif puzzle.terrainType == Terrain.Farmland.value:
+                                player.AddResource(PlayerResource.Food, add_resource_cnt * 2)
+                            elif puzzle.terrainType == Terrain.Mountain.value:
+                                player.AddResource(PlayerResource.Stone, add_resource_cnt)
                         # 抽取新的拼块
                         self.PlayerDrawToLimit(player)
                         self.next_player()

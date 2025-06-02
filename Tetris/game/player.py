@@ -1,8 +1,4 @@
 from enum import Enum
-try:
-    from Tetris.game.terrain import Puzzle, load_puzzle 
-except:
-    from terrain import Puzzle, load_puzzle
 
 
 class PlayerResource(Enum):
@@ -35,6 +31,9 @@ class Player:
             if self.resources[resource] < count:
                 return False
         return True
+
+    def AddResource(self, resource: PlayerResource, count: int):
+        self.resources[resource.value] += count
 
     def Cost(self, cost: dict):
         if cost is None:

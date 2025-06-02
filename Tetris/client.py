@@ -504,7 +504,7 @@ class Client:
                     # Show Ready button for non-ready players
                     (not current_player.get('ready', False)) or
                     # Show Start button for host when all players are ready and more than 1 player
-                    (host and host['name'] == self.username and all_ready and players_count > 1)
+                    (host and host['name'] == self.username and all_ready)
                 ):
                     for button in self.buttons:
                         pygame.draw.rect(self.screen, WHITE, button['rect'])
@@ -1018,79 +1018,6 @@ class Client:
             traceback.print_exc()
         finally:
             logger.info('Message listener stopped')
-
-    def update_players(self, users_data):
-        """Update player slots with user data"""
-        # Clear all slots first
-        self.players = {i: None for i in range(PLAYER_SLOTS)}
-        
-        # Update slots with connected players
-        for i, (username, data) in enumerate(users_data.items()):
-            if i < PLAYER_SLOTS:
-                self.players[i] = {
-                    'name': username,
-                    'resources': data.get('resources', {}),
-                    'ready': data.get('ready', False)
-                }
-
-        # 检查当前玩家和房主状态
-        host = next(iter(self.players.values()), None)
-        current_player = next((p for p in self.players.values() if p and p['name'] == self.username), None)
-        
-        # 检查是否所有玩家都准备好了
-        all_ready = True
-        players_count = sum(1 for p in self.players.values() if p)
-        
-        # 更新按钮状态
-        button_x = BLOCK_SIZE * GRID_WIDTH + (PLAYER_SLOT_WIDTH - BUTTON_WIDTH) // 2
-        button_y = SCREEN_HEIGHT - TOOLBAR_HEIGHT + 20
-        
-        if host and host['name'] == self.username and all_ready and players_count > 1:
-            # 房主看到 Start 按钮
-            self.buttons = [{
-                'text': 'Start',
-                'rect': pygame.Rect(button_x, button_y, BUTTON_WIDTH, BUTTON_HEIGHT)
-            }]
-        elif not current_player or not current_player.get('ready', False):
-            # 未准备的玩家看到 Ready 按钮
-            self.buttons = [{
-                'text': 'Ready',
-                'rect': pygame.Rect(button_x, button_y, BUTTON_WIDTH, BUTTON_HEIGHT)
-            }]
-        else:
-            # 已准备的非房主玩家不看到按钮
-            self.buttons = []
-        for player in self.players.values():
-            if player and not player.get('ready', False):
-                all_ready = False
-                break
-
-        # 更新按钮状态
-        if self.game_state == GameStatus.LOBBY.value:
-            # 获取当前玩家的状态
-            current_player = next((p for p in self.players.values() if p and p['name'] == self.username), None)
-            is_host = self.username == next(iter(users_data.keys()))
-            
-            # 更新按钮
-            if is_host and all_ready and len(users_data) > 1:
-                self.buttons = [{'text': 'Start', 'rect': pygame.Rect(
-                    BLOCK_SIZE * GRID_WIDTH + (PLAYER_SLOT_WIDTH - BUTTON_WIDTH) // 2,
-                    SCREEN_HEIGHT - TOOLBAR_HEIGHT + 20,
-                    BUTTON_WIDTH, BUTTON_HEIGHT
-                )}]
-            else:
-                ready_status = current_player.get('ready', False)
-                self.buttons = [{'text': 'Ready' if not ready_status else 'Waiting...', 'rect': pygame.Rect(
-                    BLOCK_SIZE * GRID_WIDTH + (PLAYER_SLOT_WIDTH - BUTTON_WIDTH) // 2,
-                    SCREEN_HEIGHT - TOOLBAR_HEIGHT + 20,
-                    BUTTON_WIDTH, BUTTON_HEIGHT
-                )}]
-
-        # Ensure current player is always in slot 0
-        for i, player in self.players.items():
-            if player and player['name'] == self.username:
-                if i != 0:  # If current player is not in slot 0
-                    self.players[0], self.players[i] = self.players[i], self.players[0]
 
     def handle_quit(self):
         """Handle quit event"""
