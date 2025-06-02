@@ -491,12 +491,27 @@ class Client:
                     self.buttons = []
             else:
                 # Draw Ready/Start button in lobby
-                for button in self.buttons:
-                    pygame.draw.rect(self.screen, WHITE, button['rect'])
-                    pygame.draw.rect(self.screen, BLACK, button['rect'], 1)
-                    text = self.font.render(button['text'], True, BLACK)
-                    text_rect = text.get_rect(center=button['rect'].center)
-                    self.screen.blit(text, text_rect)
+                # Get first player (host) and current player
+                host = next(iter(self.players.values()), None)
+                current_player = next((p for p in self.players.values() if p and p['name'] == self.username), None)
+                
+                # Check if all players are ready
+                all_ready = all(p.get('ready', False) for p in self.players.values() if p)
+                players_count = sum(1 for p in self.players.values() if p)
+                
+                # Show buttons based on conditions
+                if self.buttons and (
+                    # Show Ready button for non-ready players
+                    (not current_player.get('ready', False)) or
+                    # Show Start button for host when all players are ready and more than 1 player
+                    (host and host['name'] == self.username and all_ready and players_count > 1)
+                ):
+                    for button in self.buttons:
+                        pygame.draw.rect(self.screen, WHITE, button['rect'])
+                        pygame.draw.rect(self.screen, BLACK, button['rect'], 1)
+                        text = self.font.render(button['text'], True, BLACK)
+                        text_rect = text.get_rect(center=button['rect'].center)
+                        self.screen.blit(text, text_rect)
             
             # Update the display
             pygame.display.flip()
@@ -520,24 +535,29 @@ class Client:
         pygame.draw.rect(self.screen, BLACK, slot_rect, 1)
         
         if player_data:
-            # Draw player name
+            # Draw player name with color based on slot index
             name = player_data.get('name', 'Unknown')
-            if self.game_state == GameStatus.IN_GAME.value:
-                if player_data.get('current', False):
-                    name += ' (Current Player)'
+            player_colors = [PLAYER1_COLOR, PLAYER2_COLOR, PLAYER3_COLOR, PLAYER4_COLOR]
+            text_color = player_colors[slot_index] if slot_index < len(player_colors) else BLACK
+            
+            # Add hourglass emoji for current player in game
+            if self.game_state == GameStatus.IN_GAME.value and player_data.get('current', False):
+                name += ' (当前玩家)'
             if self.game_state == GameStatus.LOBBY.value:
                 if player_data.get('ready', False):
                     name += ' (Ready)'
                 else:
-                    name += ' (Waiting)'
-            name_font = pygame.font.Font(None, 24)
-            name_text = name_font.render(name, True, BLACK)
+                    name += ' (Waiting...)'
+            
+            # Render player name with color
+            name_text = self.font.render(name, True, text_color)
             self.screen.blit(name_text, (x + 5, y + 5))
             
             # Get resources from player data
             resources = player_data.get('resources', {})
             
             resource_font = pygame.font.Font(None, 20)
+            
             # 资源类型对应关系，从枚举值映射到资源名称
             resource_mapping = {
                 '1': 'food',   # PlayerResource.Food.value
@@ -1013,8 +1033,33 @@ class Client:
                     'ready': data.get('ready', False)
                 }
 
+        # 检查当前玩家和房主状态
+        host = next(iter(self.players.values()), None)
+        current_player = next((p for p in self.players.values() if p and p['name'] == self.username), None)
+        
         # 检查是否所有玩家都准备好了
         all_ready = True
+        players_count = sum(1 for p in self.players.values() if p)
+        
+        # 更新按钮状态
+        button_x = BLOCK_SIZE * GRID_WIDTH + (PLAYER_SLOT_WIDTH - BUTTON_WIDTH) // 2
+        button_y = SCREEN_HEIGHT - TOOLBAR_HEIGHT + 20
+        
+        if host and host['name'] == self.username and all_ready and players_count > 1:
+            # 房主看到 Start 按钮
+            self.buttons = [{
+                'text': 'Start',
+                'rect': pygame.Rect(button_x, button_y, BUTTON_WIDTH, BUTTON_HEIGHT)
+            }]
+        elif not current_player or not current_player.get('ready', False):
+            # 未准备的玩家看到 Ready 按钮
+            self.buttons = [{
+                'text': 'Ready',
+                'rect': pygame.Rect(button_x, button_y, BUTTON_WIDTH, BUTTON_HEIGHT)
+            }]
+        else:
+            # 已准备的非房主玩家不看到按钮
+            self.buttons = []
         for player in self.players.values():
             if player and not player.get('ready', False):
                 all_ready = False
