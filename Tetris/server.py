@@ -172,11 +172,46 @@ class LobbyServicer(rpc.LobbyServicer):
                             elif puzzle.terrainType == Terrain.Forest.value:
                                 player.AddResource(PlayerResource.Wood, add_resource_cnt)
                             elif puzzle.terrainType == Terrain.River.value:
-                                player.AddResource(PlayerResource.Food, add_resource_cnt)
+                                player.AddResource(PlayerResource.Gold, add_resource_cnt)
                             elif puzzle.terrainType == Terrain.Farmland.value:
                                 player.AddResource(PlayerResource.Food, add_resource_cnt * 2)
                             elif puzzle.terrainType == Terrain.Mountain.value:
                                 player.AddResource(PlayerResource.Stone, add_resource_cnt)
+                        # 如果填满了一个区域 额外获得一次奖励资源
+                        _block = []
+                        for cell in self.gm.GetDesktopPosition(x, y, puzzle, rotate):
+                            _block.append(self.gm.GetBlockByCell(cell[0], cell[1]))
+                        _block = list(set(_block))
+                        block_size = self.gm.setting['block_size']
+                        for _block_x, _block_y in _block:
+                            terrain_count_dict = {
+                                Terrain.Plain.value: 0,
+                                Terrain.Forest.value: 0,
+                                Terrain.River.value: 0,
+                                Terrain.Farmland.value: 0,
+                                Terrain.Mountain.value: 0
+                            }
+                            fullfill = True
+                            for cell_x in range(_block_x * block_size, (_block_x + 1) * block_size):
+                                for cell_y in range(_block_y * block_size, (_block_y + 1) * block_size):
+                                    cell = self.gm.Desktop.GetCell(cell_y, cell_x)
+                                    if cell.terrainType == Terrain.Unknown.value:
+                                        fullfill = False
+                                    if cell.terrainType in terrain_count_dict.keys():
+                                        terrain_count_dict[cell.terrainType] += 1
+                            if fullfill:
+                                logger.debug(f'Fullfill Block: {_block_x}, {_block_y}. Bouns: {terrain_count_dict}')
+                                for terrain_type, count in terrain_count_dict.items():
+                                    if terrain_type == Terrain.Plain.value:
+                                        player.AddResource(PlayerResource.Food, 5 * count)
+                                    elif terrain_type == Terrain.Forest.value:
+                                        player.AddResource(PlayerResource.Wood, 5 * count)
+                                    elif terrain_type == Terrain.River.value:
+                                        player.AddResource(PlayerResource.Gold, 5 * count)
+                                    elif terrain_type == Terrain.Farmland.value:
+                                        player.AddResource(PlayerResource.Food, 5 * count * 2)
+                                    elif terrain_type == Terrain.Mountain.value:
+                                        player.AddResource(PlayerResource.Stone, 5 * count)
                         # 抽取新的拼块
                         self.PlayerDrawToLimit(player)
                         self.next_player()

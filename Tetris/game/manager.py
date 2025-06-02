@@ -289,6 +289,12 @@ class Manager:
         cells.difference_update(self.GetPuzzleCells(x, y, puzzle, rotate))
         return cells
 
+    def GetBlockByCell(self, x, y):
+        # 根据传入的坐标，返回该坐标所属的BLOCK区域
+        block_row = x // self.setting['block_size']
+        block_col = y // self.setting['block_size']
+        return block_row, block_col
+
     def GetAdjacentPuzzle(self, x, y, puzzle, rotate):
         # 获得毗邻的板块
         puzzles = set()
@@ -340,6 +346,15 @@ class Manager:
         # 计算进攻路线
         # 计算克制关系
         pass
+
+    def GetDesktopPosition(self, x, y, puzzle: Puzzle, rotate=0):
+        shapes = self.shape_helper.GetShape(puzzle.shape)
+        pos = []
+        for cell in shapes:
+            rx, ry = rotate_point(cell[0], cell[1], rotate)
+            ax, ay = x + rx, y - ry
+            pos.append((ax, ay))
+        return pos
 
     def Place(self, player: Player, x, y, puzzle: Puzzle, rotate=0):
         if self.Desktop is None:
