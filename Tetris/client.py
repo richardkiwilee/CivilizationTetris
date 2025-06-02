@@ -84,6 +84,10 @@ BLACK = (0, 0, 0)    # 文字颜色
 CREAM = (255, 253, 245)  # 游戏区域背景色
 RED = (255, 0, 0)    # 无效放置提示
 
+PLAYER1_COLOR = (255, 0, 0)
+PLAYER2_COLOR = (0, 255, 0)
+PLAYER3_COLOR = (0, 0, 255)
+PLAYER4_COLOR = (255, 255, 0)
 
 class Client:
     def __init__(self, username: str, address='localhost', port=50051):
@@ -249,15 +253,31 @@ class Client:
         if self.game_state == GameStatus.IN_GAME.value and hasattr(self, 'game_manager'):
             try:
                 desktop_data = json.loads(self.game_manager.get('Desktop', '[]'))
+                players_data = self.game_manager.get('players', {})
+                player_colors = [PLAYER1_COLOR, PLAYER2_COLOR, PLAYER3_COLOR, PLAYER4_COLOR]
+                player_indices = {name: idx for idx, name in enumerate(players_data.keys())}
+                
                 for y, row in enumerate(desktop_data):
                     for x, cell in enumerate(row):
-                        # Draw cell borders
+                        # Draw cell borders and background
                         rect = pygame.Rect(
                             x * BLOCK_SIZE,
                             TOP_MARGIN + y * BLOCK_SIZE,
                             BLOCK_SIZE - 1,
                             BLOCK_SIZE - 1
                         )
+                        
+                        # Set background color based on owner
+                        if cell and cell.get('owner'):
+                            owner = cell['owner']
+                            if owner in player_indices:
+                                bg_color = player_colors[player_indices[owner]]
+                                # Draw background with some transparency
+                                bg_surface = pygame.Surface((BLOCK_SIZE - 1, BLOCK_SIZE - 1))
+                                bg_surface.fill(bg_color)
+                                bg_surface.set_alpha(128)  # 50% transparency
+                                self.screen.blit(bg_surface, rect)
+                        
                         pygame.draw.rect(self.screen, BLACK, rect, 1)
                         
                         # Draw terrain if exists
