@@ -280,14 +280,30 @@ class Client:
                         
                         pygame.draw.rect(self.screen, BLACK, rect, 1)
                         
-                        # Draw terrain if exists
-                        if cell and cell.get('terrainType'):
-                            terrain = cell['terrainType']
-                            img = self.terrain_images.get(terrain)
-                            if img:
-                                self.screen.blit(img, 
-                                                (x * BLOCK_SIZE, 
-                                                 y * BLOCK_SIZE + TOP_MARGIN))
+                        # Draw terrain or building if exists
+                        if cell:
+                            if cell.get('terrainType'):
+                                terrain = cell['terrainType']
+                                img = self.terrain_images.get(terrain)
+                                if img:
+                                    self.screen.blit(img, 
+                                                    (x * BLOCK_SIZE, 
+                                                     y * BLOCK_SIZE + TOP_MARGIN))
+                            elif cell.get('buildingType'):
+                                building = cell['buildingType']
+                                # Draw background color for building cells
+                                if cell.get('owner') and cell['owner'] in player_indices:
+                                    bg_color = player_colors[player_indices[cell['owner']]]
+                                    bg_surface = pygame.Surface((BLOCK_SIZE - 1, BLOCK_SIZE - 1))
+                                    bg_surface.fill(bg_color)
+                                    bg_surface.set_alpha(128)  # 50% transparency
+                                    self.screen.blit(bg_surface, rect)
+                                # Draw building image
+                                img = self.building_images.get(building)
+                                if img:
+                                    self.screen.blit(img,
+                                                    (x * BLOCK_SIZE,
+                                                     y * BLOCK_SIZE + TOP_MARGIN))
                                                     
                 # Draw block group borders
                 for block_y in range(BLOCK_COUNT):
