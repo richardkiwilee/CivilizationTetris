@@ -46,7 +46,7 @@ BLOCK_COUNT = 4  # 定义每行和每列有多少个 FILL_BLOCK
 GRID_WIDTH = BLOCK_COUNT * FILL_BLOCK
 GRID_HEIGHT = BLOCK_COUNT * FILL_BLOCK
 TOOLBAR_HEIGHT = 150  # Height of the bottom toolbar
-TOP_MARGIN = 50  # Height of top margin
+TOP_MARGIN = 200  # Height of top margin
 
 # UI Constants
 PLAYER_SLOTS = 4  # Number of player slots
@@ -120,6 +120,10 @@ class Client:
         self.needs_redraw = False
         self.current_player_index = 0
         self.current_player_name = ""
+        self.desktop_data = []
+
+        # 初始化字体
+        self.small_font = pygame.font.Font(None, 24)  # 24是字体大小
 
         # Button setup
         button_x = BLOCK_SIZE * GRID_WIDTH + (PLAYER_SLOT_WIDTH - BUTTON_WIDTH) // 2
@@ -254,12 +258,12 @@ class Client:
         # Draw grid lines and terrain
         if self.game_state == GameStatus.IN_GAME.value and hasattr(self, 'game_manager'):
             try:
-                desktop_data = json.loads(self.game_manager.get('Desktop', '[]'))
+                self.desktop_data = json.loads(self.game_manager.get('Desktop', '[]'))
                 players_data = self.game_manager.get('players', {})
                 player_colors = [PLAYER1_COLOR, PLAYER2_COLOR, PLAYER3_COLOR, PLAYER4_COLOR]
                 player_indices = {name: idx for idx, name in enumerate(players_data.keys())}
                 
-                for y, row in enumerate(desktop_data):
+                for y, row in enumerate(self.desktop_data):
                     for x, cell in enumerate(row):
                         # Draw cell borders and background
                         rect = pygame.Rect(
@@ -369,16 +373,45 @@ class Client:
             # Draw game grid and board pieces
             self.draw_game_board()
             
-            # 如果选中了拼块并且鼠标在网格内，显示网格坐标
-            if self.selected_piece and self.is_mouse_in_grid(self.mouse_pos):
+            # 鼠标在网格内，显示网格坐标
+            if self.is_mouse_in_grid(self.mouse_pos):
                 grid_x, grid_y = self.get_grid_pos_from_mouse(self.mouse_pos)
-                # 在TOP_MARGIN区域显示坐标
-                coord_text = f"Grid: ({grid_x}, {grid_y})"
-                text_surface = self.font.render(coord_text, True, BLACK)
+                try:
+                    _ = self.desktop_data[grid_y][grid_x]
+                except:
+                    _ = None
+                # 在TOP_MARGIN右侧区域显示坐标
+                x_start = SCREEN_WIDTH - PLAYER_SLOT_WIDTH + 10
+                y_start = TOP_MARGIN // 4
+                line_spacing = 5
+                
+                # 第一行显示网格坐标
+                coord_line = f"Grid: ({grid_x}, {grid_y})"
+                text_surface = self.small_font.render(coord_line, True, RED)
                 text_rect = text_surface.get_rect()
-                text_rect.centerx = GRID_WIDTH * BLOCK_SIZE // 2
-                text_rect.centery = TOP_MARGIN // 2
+                text_rect.left = x_start
+                text_rect.top = y_start
                 self.screen.blit(text_surface, text_rect)
+                
+                # 显示网格单元格信息
+                current_y = text_rect.bottom + line_spacing
+                
+                if _ is not None and isinstance(_, dict):
+                    for key, value in _.items():
+                        cell_line = f"{key}: {value}"
+                        text_surface = self.small_font.render(cell_line, True, RED)
+                        text_rect = text_surface.get_rect()
+                        text_rect.left = x_start
+                        text_rect.top = current_y
+                        self.screen.blit(text_surface, text_rect)
+                        current_y = text_rect.bottom + line_spacing
+                else:
+                    cell_line = "Cell: Empty"
+                    text_surface = self.small_font.render(cell_line, True, RED)
+                    text_rect = text_surface.get_rect()
+                    text_rect.left = x_start
+                    text_rect.top = current_y
+                    self.screen.blit(text_surface, text_rect)
             
             # Draw player slots on the right side
             logger.debug("Drawing player slots...")
@@ -717,9 +750,9 @@ class Client:
                 
             # 检查该位置是否已被占用
             try:
-                desktop_data = json.loads(self.game_manager.get('Desktop', '[]'))
-                if desktop_data[y][x] != dict():
-                    logger.error(f"Position ({x}, {y}) is already occupied: {desktop_data[y][x]}")
+                self.desktop_data = json.loads(self.game_manager.get('Desktop', '[]'))
+                if self.desktop_data[y][x] != dict():
+                    logger.error(f"Position ({x}, {y}) is already occupied: {self.desktop_data[y][x]}")
                     return False
             except (json.JSONDecodeError, IndexError, KeyError) as e:
                 logger.error(f"Error checking desktop data: {e}")
@@ -907,6 +940,43 @@ class Client:
             # Control frame rate
             self.clock.tick(60)
 
+
+    def is_mouse_in_grid(self, pos):
+        """判断鼠标是否在游戏网格内"""
+        x, y = pos
+        grid_x = (x - 0) // BLOCK_SIZE
+        grid_y = (y - TOP_MARGIN) // BLOCK_SIZE
+        return (
+            0 <= grid_x < GRID_WIDTH and
+            0 <= grid_y < GRID_HEIGHT and
+            TOP_MARGIN <= y < TOP_MARGIN + GRID_HEIGHT * BLOCK_SIZE
+        )
+    
+    def get_grid_pos_from_mouse(self, pos):
+        """获取鼠标位置对应的网格坐标"""
+        x, y = pos
+        grid_x = (x - 0) // BLOCK_SIZE
+        grid_y = (y - TOP_MARGIN) // BLOCK_SIZE
+        return grid_x, grid_y
+    
+    def is_mouse_in_toolbar(self, pos):
+        """判断鼠标是否在工具栏区域内"""
+        x, y = pos
+        toolbar_y = SCREEN_HEIGHT - TOOLBAR_HEIGHT
+        return toolbar_y <= y < SCREEN_HEIGHT
+    
+    def get_toolbar_piece_index(self, pos):
+        """获取工具栏中鼠标位置对应的拼图索引"""
+        if not self.is_mouse_in_toolbar(pos):
+            return None
+            
+        x, y = pos
+        piece_width = BLOCK_SIZE * 4  # 每个拼图显示区域的宽度
+        piece_x = (x - 10) // piece_width  # 10是左边距
+        
+        if 0 <= piece_x < len(self.toolbar_pieces):
+            return piece_x
+        return None
 
     def __listen_for_messages(self):
         """Listen for messages from the server and update game state"""
