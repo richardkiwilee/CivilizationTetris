@@ -1,6 +1,5 @@
 from enum import Enum
 
-
 class PlayerResource(Enum):
     Gold = 0        # 金币
     Food = 1        # 粮食
@@ -10,10 +9,7 @@ class PlayerResource(Enum):
     Decree = 7      # 政令点数
     Citizen = 8    # 市民
 
-class Player:
-    def __init__(self):
-        self.name = None
-        self.resources = {
+prod_resource = {
             PlayerResource.Gold.value: 0,
             PlayerResource.Food.value: 100,
             PlayerResource.Wood.value: 100,
@@ -22,6 +18,21 @@ class Player:
             PlayerResource.Decree.value: 0,
             PlayerResource.Citizen.value: 0
         }
+
+debug_resource = {
+            PlayerResource.Gold.value: 1000,
+            PlayerResource.Food.value: 1000,
+            PlayerResource.Wood.value: 1000,
+            PlayerResource.Stone.value: 1000,
+            PlayerResource.Faith.value: 1000,
+            PlayerResource.Decree.value: 1000,
+            PlayerResource.Citizen.value: 1000
+        }
+
+class Player:
+    def __init__(self):
+        self.name = None
+        self.resources = debug_resource
         self.puzzles = dict()
 
     def ResourceEnough(self, cost: dict) -> bool:

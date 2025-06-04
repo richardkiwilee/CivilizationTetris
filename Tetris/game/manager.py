@@ -386,6 +386,10 @@ class Manager:
                 cell.puzzle_id = puzzle.puzzle_id   
                 cell.building_id = puzzle.building_id
             # 放置完后 触发效果
+            if puzzle.building_id is not None:
+                building = self.BuildingFactory.GetBuildingById(puzzle.building_id)
+                if building is not None:
+                    print(building)
             pass
         else:
             logger.error("Resource not enough")

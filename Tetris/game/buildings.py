@@ -54,7 +54,54 @@ class BuildingFactory:
                                 upgrade_costs[level][PlayerResource[resource_type].value] = int(amount)
                     
                     building_instance['cost'] = upgrade_costs
-                
+                # 解析Activate
+                activate_element = building.find('Activate')
+                if activate_element is not None:
+                    effects = []
+                    for effect in activate_element.findall('Effect'):
+                        effect_type = effect.get('Type')
+                        range_element = effect.find('Range')
+                        if range_element is not None:
+                            range_values = range_element.get('Range').split('/')
+                            max_range = 2  # 通常有3个等级 (0,1,2)
+                            ranges = [int(range_values[level]) if level < len(range_values) else 0 for level in range(max_range + 1)]
+                        else:
+                            ranges = [0] * (max_range + 1)
+                        
+                        triggers = []
+                        for trigger in effect.findall('Trigger'):
+                            trigger_type = trigger.get('Type')
+                            from_terrain = trigger.get('From')
+                            to_terrain = trigger.get('To')
+                            triggers.append({'type': trigger_type, 'from': from_terrain, 'to': to_terrain})
+                        
+                        effects.append({'type': effect_type, 'ranges': ranges, 'triggers': triggers})
+                    
+                    building_instance['activate'] = effects
+                # 解析Passive
+                passive_element = building.find('Passive')
+                if passive_element is not None:
+                    effects = []
+                    for effect in passive_element.findall('Effect'):
+                        effect_type = effect.get('Type')
+                        range_element = effect.find('Range')
+                        if range_element is not None:
+                            range_values = range_element.get('Range').split('/')
+                            max_range = 2  # 通常有3个等级 (0,1,2)
+                            ranges = [int(range_values[level]) if level < len(range_values) else 0 for level in range(max_range + 1)]
+                        else:
+                            ranges = [0] * (max_range + 1)
+                        
+                        triggers = []
+                        for trigger in effect.findall('Trigger'):
+                            trigger_type = trigger.get('Type')
+                            from_terrain = trigger.get('From')
+                            to_terrain = trigger.get('To')
+                            triggers.append({'type': trigger_type, 'from': from_terrain, 'to': to_terrain})
+                        
+                        effects.append({'type': effect_type, 'ranges': ranges, 'triggers': triggers})
+                    
+                    building_instance['passive'] = effects
                 # 将建筑实例添加到字典中
                 self.buildings[building_id] = building_instance
                 
