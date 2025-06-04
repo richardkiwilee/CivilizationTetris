@@ -462,18 +462,28 @@ class Client:
                             piece_width = (max_x - min_x + 1) * BLOCK_SIZE
                             piece_height = (max_y - min_y + 1) * BLOCK_SIZE
                             
-                            # 计算中心位置
+                            # 计算拼块的基准大小
+                            piece_width = (max_x - min_x + 1) * BLOCK_SIZE
+                            piece_height = (max_y - min_y + 1) * BLOCK_SIZE
+                            
+                            # 计算缩放比例，确保拼块适合工具栏高度
+                            max_height = TOOLBAR_HEIGHT - 20  # 去掉上下各神10像素的边距
+                            scale = 1.0  # 默认不缩放
+                            if piece_height > max_height:
+                                scale = max_height / piece_height
+                                piece_height = max_height
+                                piece_width *= scale
+                            
+                            # 计算拼块的中心位置
                             x = piece_spacing * (idx + 1) - piece_width // 2
-                            # 使用固定的y值使所有拼块在同一水平线上
-                            # 将y值调整为toolbar的中心，并考虑形状的高度
-                            y = toolbar_y + (TOOLBAR_HEIGHT - piece_height) // 2
+                            y = toolbar_y + 10  # 距离工具栏顶部10像素
                             
                             # 绘制每个方块
+                            block_size = BLOCK_SIZE * scale  # 使用缩放后的块大小
                             for cell_x, cell_y in cells:
                                 # 计算实际的绘制位置
-                                block_x = x + (cell_x - min_x) * BLOCK_SIZE
-                                # 注意这里使用cell_y的负值，因为向下为负
-                                block_y = y + (-cell_y - min_y) * BLOCK_SIZE
+                                block_x = x + (cell_x - min_x) * block_size
+                                block_y = y + (-cell_y - min_y) * block_size
                                 
                                 # 绘制单个方块
                                 if piece.get('is_valid', True):
