@@ -177,7 +177,7 @@ class Manager:
             if ax < 0 or ax >= self.Desktop.rows or ay < 0 or ay >= self.Desktop.cols:
                 return False
             # 检查该位置是否已被占用 建筑可以在己方相同的地形上加盖
-            cell = self.Desktop.GetCell(ay, ax)
+            cell = self.Desktop.GetCell(ax, ay)
             if cell is None:
                 logger.error(f"Check Cell Placeable fail: cell {ax}, {ay} is None")
                 return False
@@ -190,32 +190,49 @@ class Manager:
     def GetPuzzleCells(self, x, y, puzzle: Puzzle, rotate):
         # 获得puzzle本身的格子
         cells = set()
-        for cell in puzzle.cells:
-            rx, ry = rotate_point(cell[0], cell[1], rotate)
-            ax, ay = x + rx, y + ry
+        shapes = self.shape_helper.GetShape(puzzle.shape)
+        for _cell in shapes:
+            # 计算旋转后的相对坐标
+            rx, ry = rotate_point(_cell[0], _cell[1], rotate)
+            # 计算实际坐标
+            ax, ay = x + rx, y - ry
+            # 检查坐标是否在地图范围内
+            if ax < 0 or ax >= self.Desktop.rows or ay < 0 or ay >= self.Desktop.cols:
+                continue
             cells.add((ax, ay))
         return cells
 
     def GetRangeCells(self, x, y, puzzle, rotate, n):
         # 获得n范围内的所有其他格子
         cells = set()
-        # 对每一个格子计算出range的集合
-        for cell in puzzle.cells:
-            rx, ry = rotate_point(cell[0], cell[1], rotate)
-            ax, ay = x + rx, y + ry
+        shapes = self.shape_helper.GetShape(puzzle.shape)
+        for _cell in shapes:
+            # 计算旋转后的相对坐标
+            rx, ry = rotate_point(_cell[0], _cell[1], rotate)
+            # 计算实际坐标
+            ax, ay = x + rx, y - ry
+            # 检查坐标是否在地图范围内
+            if ax < 0 or ax >= self.Desktop.rows or ay < 0 or ay >= self.Desktop.cols:
+                continue
             for _x in range(n):
                 _y = n - _x
                 cells.add((ax + _x, ay + _y))
-                cells.add((-1 * (ax + _x), -1 * (ay + _y)))
+                cells.add((ax - _x, ay - _y))
         cells.difference_update(self.GetPuzzleCells(x, y, puzzle, rotate))
         return cells
 
     def GetSameRowCol(self, x, y, puzzle, rotate):
         # 获得同行同列的所有其他格子
         cells = set()
-        for cell in puzzle.cells:
-            rx, ry = rotate_point(cell[0], cell[1], rotate)
-            ax, ay = x + rx, y + ry
+        shapes = self.shape_helper.GetShape(puzzle.shape)
+        for _cell in shapes:
+            # 计算旋转后的相对坐标
+            rx, ry = rotate_point(_cell[0], _cell[1], rotate)
+            # 计算实际坐标
+            ax, ay = x + rx, y - ry
+            # 检查坐标是否在地图范围内
+            if ax < 0 or ax >= self.Desktop.rows or ay < 0 or ay >= self.Desktop.cols:
+                continue
             for col in range(0, self.Desktop.cols):
                 cells.add((ax, col))
             for row in range(0, self.Desktop.rows):
@@ -228,43 +245,18 @@ class Manager:
         cells = self.GetRangeCells(x, y, puzzle, rotate, n=1)
         return cells
 
-    def GetFillRowCol(self, x, y, puzzle, rotate):
-        # 获得填充行列的所有格子 不排除建筑
-        rows = set()    
-        cols = set()
-        for cell in puzzle.cells:
-            rx, ry = rotate_point(cell[0], cell[1], rotate)
-            ax, ay = x + rx, y + ry
-            rows.add(ax)
-            cols.add(ay)
-        fill = {'row': set(), 'col': set()}
-        for row in rows:
-            for col in range(0, self.Desktop.cols):
-                _cell = self.Desktop.GetCell(row, col)
-                if _cell.terrain is None:
-                    continue
-            fill['row'].add(row)
-        for col in cols:
-            for row in range(0, self.Desktop.rows):
-                _cell = self.Desktop.GetCell(row, col)
-                if _cell.terrain is None:
-                    continue
-            fill['col'].add(col)
-        cells = set()
-        for _ in fill['row']:
-            for col in range(0, self.Desktop.cols):
-                cells.add((_ , col))
-        for _ in fill['col']:
-            for row in range(0, self.Desktop.rows):
-                cells.add((row , _))
-        return cells
-
     def GetConnectedCells(self, x, y, puzzle, rotate):
         # 获得连接的所有格子 按地形分类
         connected = dict()
-        for cell in puzzle.cells:
-            rx, ry = rotate_point(cell[0], cell[1], rotate)
+        shapes = self.shape_helper.GetShape(puzzle.shape)
+        for _cell in shapes:
+            # 计算旋转后的相对坐标
+            rx, ry = rotate_point(_cell[0], _cell[1], rotate)
+            # 计算实际坐标
             ax, ay = x + rx, y - ry
+            # 检查坐标是否在地图范围内
+            if ax < 0 or ax >= self.Desktop.rows or ay < 0 or ay >= self.Desktop.cols:
+                continue
             _cell = self.Desktop.GetCell(ax, ay)
             if _cell and _cell.terrain:
                 if _cell.terrain not in connected:
@@ -275,10 +267,15 @@ class Manager:
     def GetAdjacentCells(self, x, y, puzzle, rotate):
         # 获得毗邻的格子
         cells = set()
-        # 获取拼图所有格子的边界
-        for cell in puzzle.cells:
-            rx, ry = rotate_point(cell[0], cell[1], rotate)
-            ax, ay = x + rx, y + ry
+        shapes = self.shape_helper.GetShape(puzzle.shape)
+        for _cell in shapes:
+            # 计算旋转后的相对坐标
+            rx, ry = rotate_point(_cell[0], _cell[1], rotate)
+            # 计算实际坐标
+            ax, ay = x + rx, y - ry
+            # 检查坐标是否在地图范围内
+            if ax < 0 or ax >= self.Desktop.rows or ay < 0 or ay >= self.Desktop.cols:
+                continue
             # 检查上下左右四个方向
             for dx, dy in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
                 nx, ny = ax + dx, ay + dy
@@ -377,21 +374,17 @@ class Manager:
             shapes = self.shape_helper.GetShape(puzzle.shape)
             if shapes is None:
                 logger.error(f"Shape is None. shape: {puzzle.shape}")
-            logger.debug(f"Placing puzzle: ({x}, {y}) - {puzzle.dump()} - {rotate}")
-            logger.debug(f"Placing cells: {shapes}")
             for cell in shapes:   # type: Cell
                 # 计算旋转后的相对坐标
                 rx, ry = rotate_point(cell[0], cell[1], rotate)
                 # 计算实际坐标 地图向下y增加所以需要旋转
                 ax, ay = x + rx, y - ry
-                logger.debug(f"Placing cell: ({rx}, {ry}) -> ({ax}, {ay})")
                 # 设置坐标
-                cell = self.Desktop.GetCell(ay, ax)
+                cell = self.Desktop.GetCell(ax, ay)
                 cell.owner  = player.name
                 cell.terrainType = puzzle.terrainType
                 cell.puzzle_id = puzzle.puzzle_id   
                 cell.building_id = puzzle.building_id
-            
             # 放置完后 触发效果
             pass
         else:

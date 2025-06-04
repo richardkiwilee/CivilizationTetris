@@ -194,13 +194,13 @@ class LobbyServicer(rpc.LobbyServicer):
                             fullfill = True
                             for cell_x in range(_block_x * block_size, (_block_x + 1) * block_size):
                                 for cell_y in range(_block_y * block_size, (_block_y + 1) * block_size):
-                                    cell = self.gm.Desktop.GetCell(cell_y, cell_x)
+                                    cell = self.gm.Desktop.GetCell(cell_x, cell_y)
                                     if cell.terrainType == Terrain.Unknown.value:
                                         fullfill = False
                                     if cell.terrainType in terrain_count_dict.keys():
                                         terrain_count_dict[cell.terrainType] += 1
                             if fullfill:
-                                logger.debug(f'Fullfill Block: {_block_x}, {_block_y}. Bouns: {terrain_count_dict}')
+                                logger.info(f'Fullfill Block: {_block_x}, {_block_y}. Bouns: {terrain_count_dict}')
                                 for terrain_type, count in terrain_count_dict.items():
                                     if terrain_type == Terrain.Plain.value:
                                         player.AddResource(PlayerResource.Food, 5 * count)
@@ -212,6 +212,8 @@ class LobbyServicer(rpc.LobbyServicer):
                                         player.AddResource(PlayerResource.Food, 5 * count * 2)
                                     elif terrain_type == Terrain.Mountain.value:
                                         player.AddResource(PlayerResource.Stone, 5 * count)
+                            else:
+                                logger.info(f'Not fullfill Block: {_block_x}, {_block_y}. Bouns: {terrain_count_dict}')
                         # 抽取新的拼块
                         self.PlayerDrawToLimit(player)
                         self.next_player()

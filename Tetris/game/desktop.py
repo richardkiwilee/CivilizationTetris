@@ -26,8 +26,7 @@ class Desktop:
         if x < 0 or x >= self.rows or y < 0 or y >= self.cols:
             logger.error(f'GetCell {x}, {y} out of range')
             return None
-        _cell = self.GameMap[x][y]
-        logger.debug(f'GetCell {x}, {y}: {_cell.dump()}')
+        _cell = self.GameMap[y][x]
         return _cell
 
     def SetCell(self, x, y, cell):
