@@ -712,8 +712,13 @@ class Client:
             
             # Calculate piece position - 水平中心对齐
             piece_x = piece_spacing * (idx + 1) - piece_width // 2
-            # 在工具栏中垂直居中
-            piece_y = toolbar_y + TOOLBAR_HEIGHT // 2
+            
+            # 在工具栏中垂直定位
+            # 对于单行形状，将其放在工具栏的上部位置
+            if max_y == min_y:  # 单行形状
+                piece_y = toolbar_y + BLOCK_SIZE
+            else:  # 多行形状
+                piece_y = toolbar_y + TOOLBAR_HEIGHT // 2
             
             # 检查点击是否在形状范围内
             # 因为draw_piece是向上绘制的，所以点击区域也应该向上检测
