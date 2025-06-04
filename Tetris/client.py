@@ -226,7 +226,7 @@ class Client:
         if not piece or 'shape' not in piece:
             logger.error("Invalid piece or missing shape")
             return
-            
+        
         # 获取形状的相对坐标
         cells = None
         if 'rotated_cells' in piece:
@@ -478,12 +478,16 @@ class Client:
                             x = piece_spacing * (idx + 1) - piece_width // 2
                             y = toolbar_y + 10  # 距离工具栏顶部10像素
                             
+                            # 找到拼块的最高点（最大y值）
+                            max_cell_y = max(y for _, y in cells)
+                            
                             # 绘制每个方块
                             block_size = BLOCK_SIZE * scale  # 使用缩放后的块大小
                             for cell_x, cell_y in cells:
                                 # 计算实际的绘制位置
                                 block_x = x + (cell_x - min_x) * block_size
-                                block_y = y + (-cell_y - min_y) * block_size
+                                # 使用max_cell_y来对齐顶部
+                                block_y = y + (max_cell_y - cell_y) * block_size
                                 
                                 # 绘制单个方块
                                 if piece.get('is_valid', True):
@@ -706,13 +710,15 @@ class Client:
             piece_width = (max_x - min_x + 1) * BLOCK_SIZE
             piece_height = (max_y - min_y + 1) * BLOCK_SIZE
             
-            # Calculate piece position
+            # Calculate piece position - 水平中心对齐
             piece_x = piece_spacing * (idx + 1) - piece_width // 2
-            piece_y = toolbar_y + (TOOLBAR_HEIGHT - piece_height) // 2
+            # 在工具栏中垂直居中
+            piece_y = toolbar_y + TOOLBAR_HEIGHT // 2
             
-            # Check if click is within piece bounds
+            # 检查点击是否在形状范围内
+            # 因为draw_piece是向上绘制的，所以点击区域也应该向上检测
             if (piece_x <= x < piece_x + piece_width and
-                piece_y <= y < piece_y + piece_height):
+                piece_y - piece_height <= y < piece_y + piece_height):
                 return piece
         
         return None
@@ -981,11 +987,41 @@ class Client:
             return None
             
         x, y = pos
-        piece_width = BLOCK_SIZE * 4  # 每个拼图显示区域的宽度
-        piece_x = (x - 10) // piece_width  # 10是左边距
+        max_pieces = 5
+        available_width = BLOCK_SIZE * GRID_WIDTH
+        piece_spacing = available_width // (max_pieces + 1)
         
-        if 0 <= piece_x < len(self.toolbar_pieces):
-            return piece_x
+        # 遍历所有可能的位置
+        for idx in range(max_pieces):
+            if idx < len(self.toolbar_pieces):
+                piece = self.toolbar_pieces[idx]
+                if piece and 'shape' in piece and piece['shape']:
+                    # 获取形状的相对坐标
+                    cells = ShapeHelper().GetShape(piece['shape'])
+                    if cells:
+                        # 计算形状的边界
+                        min_x = min(x_ for x_, _ in cells)
+                        max_x = max(x_ for x_, _ in cells)
+                        
+                        # 计算拼块的基准大小
+                        piece_width = (max_x - min_x + 1) * BLOCK_SIZE
+                        piece_height = (max_y - min_y + 1) * BLOCK_SIZE
+                        
+                        # 计算缩放比例，确保拼块适合工具栏高度
+                        max_height = TOOLBAR_HEIGHT - 20
+                        scale = 1.0
+                        if piece_height > max_height:
+                            scale = max_height / piece_height
+                            piece_width *= scale
+                        
+                        # 计算拼块的中心位置
+                        center_x = piece_spacing * (idx + 1)
+                        piece_left = center_x - piece_width // 2
+                        piece_right = center_x + piece_width // 2
+                        
+                        # 检查鼠标是否在当前拼块的范围内
+                        if piece_left <= x <= piece_right:
+                            return idx
         return None
 
     def __listen_for_messages(self):
