@@ -131,6 +131,7 @@ class Client:
         self.current_player_index = 0
         self.current_player_name = ""
         self.desktop_data = []
+        self.puzzle_objs = {}
 
         # 初始化字体
         self.small_font = pygame.font.Font(None, 24)  # 24是字体大小
@@ -400,9 +401,9 @@ class Client:
         
     def draw(self):
         """Draw the game state"""
-        logger.debug("In Draw func")
+        # logger.debug("In Draw func")
         with self.game_state_lock:
-            logger.debug(f"Game State: {self.game_state}; Toolbar Pieces: {len(self.toolbar_pieces)}")
+            # logger.debug(f"Game State: {self.game_state}; Toolbar Pieces: {len(self.toolbar_pieces)}")
             
             # Fill background
             self.screen.fill(CREAM)
@@ -495,13 +496,13 @@ class Client:
                     self.screen.blit(text_surface, text_rect)
             
             # Draw player slots on the right side
-            logger.debug("Drawing player slots...")
+            # logger.debug("Drawing player slots...")
             for i in range(PLAYER_SLOTS):
                 if i in self.players and self.players[i]:
-                    logger.debug(f"Player {i}: {self.players[i]['name']}")
+                    # logger.debug(f"Player {i}: {self.players[i]['name']}")
                     self.draw_player_slot(i, self.players[i])
                 else:
-                    logger.debug(f"Player {i}: Empty")
+                    # logger.debug(f"Player {i}: Empty")
                     self.draw_player_slot(i, None)
             
             # Draw toolbar at the bottom
@@ -511,14 +512,14 @@ class Client:
             
             # Draw toolbar pieces in IN_GAME state
             if self.game_state == GameStatus.IN_GAME.value:
-                logger.debug("=== Drawing Toolbar Pieces ===")
+                # logger.debug("=== Drawing Toolbar Pieces ===")
                 # 预设5个固定的grid位置
                 max_pieces = 5
                 available_width = BLOCK_SIZE * GRID_WIDTH
                 piece_spacing = available_width // (max_pieces + 1)
                 
-                logger.debug(f"Toolbar dimensions: width={available_width}, spacing={piece_spacing}")
-                logger.debug(f"Current toolbar pieces: {len(self.toolbar_pieces) if self.toolbar_pieces else 0}")
+                # logger.debug(f"Toolbar dimensions: width={available_width}, spacing={piece_spacing}")
+                # logger.debug(f"Current toolbar pieces: {len(self.toolbar_pieces) if self.toolbar_pieces else 0}")
                 
                 # 初始化ShapeHelper
                 shape_helper = ShapeHelper()
@@ -832,8 +833,11 @@ class Client:
             if cell:
                 print(cell)
                 building_id = cell.get('building_id')
+                puzzle_id = cell.get('puzzle_id')
                 if building_id is not None:
                     building_data = self.BuildingFactory.GetBuildingById(building_id)
+                    puzzle_data = self.puzzle_objs.get(str(puzzle_id))
+                    print(puzzle_data)
                     common_text, activate_text, passive_text = self.BuildingFactory.GetTextById(building_id)
                     # 将描述文本组织成列表，便于逐行渲染
                     self.selected_building_desc = []
@@ -986,7 +990,7 @@ class Client:
         piece_width = (max_x - min_x + 1)
         piece_height = (max_y - min_y + 1)
         
-        logger.debug(f"Placing piece at ({grid_x}, {grid_y}) with rotation {rotate}")
+        # logger.debug(f"Placing piece at ({grid_x}, {grid_y}) with rotation {rotate}")
         # 发送放置消息
         resp = self.sendMessage(
             PlayerAction.Place.value,
@@ -1108,7 +1112,7 @@ class Client:
             # Draw if needed and enough time has passed since last draw
             if self.needs_redraw and current_time - last_draw_time >= 1/30:  # 限制最大刷新率为30FPS
                 try:
-                    logger.debug(f"In run: Drawing game state: {self.game_state}")
+                    # logger.debug(f"In run: Drawing game state: {self.game_state}")
                     self.draw()
                     pygame.display.flip()
                     self.needs_redraw = False
@@ -1227,8 +1231,9 @@ class Client:
                                 if 'manager' in data and 'players' in data['manager']:
                                     with self.game_state_lock:
                                         self.game_manager = data['manager']
+                                        self.puzzle_objs = data['manager']['puzzle_objs']
                                         players_data = data['manager']['players']
-                                        logger.debug(f'players_data: {players_data}')
+                                        # logger.debug(f'players_data: {players_data}')
                                         
                                         # First update the player order and resources
                                         if 'players' in data:
@@ -1265,9 +1270,10 @@ class Client:
                                                     'is_valid': True
                                                 }
                                                 self.toolbar_pieces.append(piece)
-                                            logger.debug(f"Updated toolbar pieces: {len(self.toolbar_pieces)} pieces")
+                                            # logger.debug(f"Updated toolbar pieces: {len(self.toolbar_pieces)} pieces")
                                             for piece in self.toolbar_pieces:
-                                                logger.debug(f"Piece: {piece}")
+                                                # logger.debug(f"Piece: {piece}")
+                                                pass 
                                         
                                         # Initialize game buttons if needed
                                         if self.current_player_name == self.username:
