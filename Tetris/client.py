@@ -858,7 +858,30 @@ class Client:
         except (IndexError, KeyError) as e:
             logger.error(f"Error selecting building: {e}")
         return False
-        
+
+    def select_building_at_toolbar(self, building_id):
+        """Select a building at the given grid position and update description"""
+        try:
+            building_data = self.BuildingFactory.GetBuildingById(building_id)
+            common_text, activate_text, passive_text = self.BuildingFactory.GetTextById(building_id)
+            # 将描述文本组织成列表，便于逐行渲染
+            self.selected_building_desc = []
+            if common_text:
+                self.selected_building_desc.append(common_text)
+            if activate_text:
+                self.selected_building_desc.append(activate_text)
+            if passive_text:
+                self.selected_building_desc.append(passive_text)
+            self.selected_building_pos = (building_id)
+            # Enable/disable buttons based on ownership
+            for button in self.action_buttons:
+                button['enabled'] = False
+            self.needs_redraw = True
+            return True
+        except (IndexError, KeyError) as e:
+            logger.error(f"Error selecting building: {e}")
+        return False
+
     def activate_building(self):
         """Activate the currently selected building"""
         if hasattr(self, 'selected_building_pos'):
@@ -1034,6 +1057,8 @@ class Client:
                             if piece:
                                 self.selected_piece = piece.copy()
                                 self.selected_building_desc = None  # Clear building description when selecting piece
+                                if piece['building_id']:
+                                    self.select_building_at_toolbar(piece['building_id'])
                                 self.needs_redraw = True
                             continue
                         
@@ -1073,6 +1098,7 @@ class Client:
                         if self.selected_piece:
                             # Cancel piece selection on right click
                             self.selected_piece = None
+                            self.selected_building_desc = None
                             self.needs_redraw = True
                         else:
                             # Clear building selection on right click
