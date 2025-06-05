@@ -48,6 +48,14 @@ GRID_HEIGHT = BLOCK_COUNT * FILL_BLOCK
 TOOLBAR_HEIGHT = 150  # Height of the bottom toolbar
 TOP_MARGIN = 200  # Height of top margin
 
+# Top margin layout
+TOP_MARGIN_SQUARE_WIDTH = TOP_MARGIN  # Left square area width equals top margin height
+TOP_MARGIN_INFO_WIDTH = 500  # Fixed width for building info area
+TOP_MARGIN_DESC_HEIGHT = int(TOP_MARGIN * 0.6)  # Description takes 60% of height
+TOP_MARGIN_BUTTON_HEIGHT = TOP_MARGIN - TOP_MARGIN_DESC_HEIGHT  # Remaining height for buttons area
+ACTION_BUTTON_WIDTH = 120  # Width for action buttons
+ACTION_BUTTON_HEIGHT = 40  # Height for action buttons
+
 # UI Constants
 PLAYER_SLOTS = 4  # Number of player slots
 PLAYER_SLOT_HEIGHT = 180  # Height of each player slot
@@ -130,6 +138,29 @@ class Client:
         self.buttons = [
             {'text': 'Ready', 'rect': pygame.Rect(button_x, SCREEN_HEIGHT - TOOLBAR_HEIGHT + 20, BUTTON_WIDTH, BUTTON_HEIGHT)}
         ]
+        
+        # Action buttons setup
+        button_width = (TOP_MARGIN_INFO_WIDTH - 3 * BUTTON_MARGIN) // 2
+        button_y = TOP_MARGIN_DESC_HEIGHT + (TOP_MARGIN_BUTTON_HEIGHT - BUTTON_HEIGHT) // 2
+        
+        # Activate building button
+        button_x = TOP_MARGIN_SQUARE_WIDTH + BUTTON_MARGIN
+        activate_button = {
+            'text': '激活建筑',
+            'rect': pygame.Rect(button_x, button_y, button_width, BUTTON_HEIGHT)
+        }
+        
+        # Upgrade building button
+        button_x = TOP_MARGIN_SQUARE_WIDTH + 2 * BUTTON_MARGIN + button_width
+        upgrade_button = {
+            'text': '升级建筑',
+            'rect': pygame.Rect(button_x, button_y, button_width, BUTTON_HEIGHT)
+        }
+        
+        self.action_buttons = [activate_button, upgrade_button]
+        
+        # Description area
+        self.selected_building_desc = None
         
         # Initialize empty player slots
         self.players = {i: None for i in range(PLAYER_SLOTS)}
@@ -370,6 +401,69 @@ class Client:
             # Fill background
             self.screen.fill(CREAM)
             
+            # Draw top margin layout
+            # Left square area
+            pygame.draw.rect(self.screen, BLACK, (0, 0, TOP_MARGIN_SQUARE_WIDTH, TOP_MARGIN), 2)
+            
+            # Draw description area
+            desc_rect = pygame.Rect(TOP_MARGIN_SQUARE_WIDTH, 0, TOP_MARGIN_INFO_WIDTH, TOP_MARGIN_DESC_HEIGHT)
+            pygame.draw.rect(self.screen, (200, 200, 200), desc_rect)
+            pygame.draw.line(self.screen, (100, 100, 100), (TOP_MARGIN_SQUARE_WIDTH, 0), (TOP_MARGIN_SQUARE_WIDTH + TOP_MARGIN_INFO_WIDTH, 0), 2)
+            pygame.draw.line(self.screen, (100, 100, 100), (TOP_MARGIN_SQUARE_WIDTH, TOP_MARGIN_DESC_HEIGHT), (TOP_MARGIN_SQUARE_WIDTH + TOP_MARGIN_INFO_WIDTH, TOP_MARGIN_DESC_HEIGHT), 2)
+            pygame.draw.line(self.screen, (100, 100, 100), (TOP_MARGIN_SQUARE_WIDTH, 0), (TOP_MARGIN_SQUARE_WIDTH, TOP_MARGIN), 2)
+            pygame.draw.line(self.screen, (100, 100, 100), (TOP_MARGIN_SQUARE_WIDTH + TOP_MARGIN_INFO_WIDTH, 0), (TOP_MARGIN_SQUARE_WIDTH + TOP_MARGIN_INFO_WIDTH, TOP_MARGIN), 2)
+            
+            # Draw button area
+            button_rect = pygame.Rect(TOP_MARGIN_SQUARE_WIDTH, TOP_MARGIN_DESC_HEIGHT, TOP_MARGIN_INFO_WIDTH, TOP_MARGIN_BUTTON_HEIGHT)
+            pygame.draw.rect(self.screen, (180, 180, 180), button_rect)
+            pygame.draw.line(self.screen, (100, 100, 100), (TOP_MARGIN_SQUARE_WIDTH, TOP_MARGIN), (TOP_MARGIN_SQUARE_WIDTH + TOP_MARGIN_INFO_WIDTH, TOP_MARGIN), 2)
+            
+            # Draw description text if building is selected
+            if self.selected_building_desc:
+                text_surface = self.font.render(self.selected_building_desc, True, (0, 0, 0))
+                text_rect = text_surface.get_rect()
+                text_x = TOP_MARGIN_SQUARE_WIDTH + 10
+                text_y = 10
+                # Handle text wrapping if needed
+                max_width = TOP_MARGIN_INFO_WIDTH - 20
+                if text_rect.width > max_width:
+                    words = self.selected_building_desc.split()
+                    lines = []
+                    current_line = []
+                    current_width = 0
+                    
+                    for word in words:
+                        word_surface = self.font.render(word + ' ', True, (0, 0, 0))
+                        word_width = word_surface.get_width()
+                        
+                        if current_width + word_width <= max_width:
+                            current_line.append(word)
+                            current_width += word_width
+                        else:
+                            lines.append(' '.join(current_line))
+                            current_line = [word]
+                            current_width = word_width
+                    
+                    if current_line:
+                        lines.append(' '.join(current_line))
+                    
+                    for i, line in enumerate(lines):
+                        line_surface = self.font.render(line, True, (0, 0, 0))
+                        self.screen.blit(line_surface, (text_x, text_y + i * 25))
+                else:
+                    self.screen.blit(text_surface, (text_x, text_y))
+            
+            # Draw action buttons
+            for button in self.action_buttons:
+                # Draw button background
+                pygame.draw.rect(self.screen, (220, 220, 220), button['rect'])
+                # Draw button border
+                pygame.draw.rect(self.screen, BLACK, button['rect'], 2)
+                # Draw button text
+                text_surface = self.font.render(button['text'], True, BLACK)
+                text_rect = text_surface.get_rect(center=button['rect'].center)
+                self.screen.blit(text_surface, text_rect)
+            
             # Draw game grid and board pieces
             self.draw_game_board()
             
@@ -459,10 +553,6 @@ class Client:
                             max_y = max(y for _, y in cells)
                             
                             # 计算形状的尺寸
-                            piece_width = (max_x - min_x + 1) * BLOCK_SIZE
-                            piece_height = (max_y - min_y + 1) * BLOCK_SIZE
-                            
-                            # 计算拼块的基准大小
                             piece_width = (max_x - min_x + 1) * BLOCK_SIZE
                             piece_height = (max_y - min_y + 1) * BLOCK_SIZE
                             
@@ -656,22 +746,36 @@ class Client:
             self.screen.blit(empty_text, text_rect)
 
     def handle_button_click(self, pos):
-        # 检查所有按钮的点击
+        # Check regular buttons
         for button in self.buttons:
             if button['rect'].collidepoint(pos):
                 if self.game_state == GameStatus.LOBBY.value:
-                    # 处理大厅中的按钮
+                    # Handle lobby buttons
                     if button['text'] == 'Ready':
                         self.sendMessage(PlayerAction.Ready.value, self.username, None, None, None, None)
                     elif button['text'] == 'Start':
                         self.sendMessage(PlayerAction.StartGame.value, self.username, None, None, None, None)
                 else:
-                    # 处理游戏中的按钮
+                    # Handle game buttons
                     if button['text'] == '更换建筑':
                         self.sendMessage(PlayerAction.ChangeCard.value, self.username, None, None, None, None)
                     elif button['text'] == '结束回合':
                         self.sendMessage(PlayerAction.EndTurn.value, self.username, None, None, None, None)
-                break
+                return True
+        
+        # Check action buttons
+        for button in self.action_buttons:
+            if button['rect'].collidepoint(pos):
+                if button['text'] == '激活建筑':
+                    # Handle activate building
+                    if hasattr(self, 'selected_building_pos'):
+                        self.activate_building()
+                elif button['text'] == '升级建筑':
+                    # Handle upgrade building
+                    if hasattr(self, 'selected_building_pos'):
+                        self.upgrade_building()
+                return True
+        return False
 
     def is_mouse_in_toolbar(self, pos):
         """Check if mouse is in the toolbar area"""
@@ -733,6 +837,48 @@ class Client:
         x = max(0, min(pos[0] // BLOCK_SIZE, GRID_WIDTH - 1))
         y = max(0, min((pos[1] - TOP_MARGIN) // BLOCK_SIZE, GRID_HEIGHT - 1))
         return x, y
+        
+    def select_building_at_pos(self, grid_x, grid_y):
+        """Select a building at the given grid position and update description"""
+        try:
+            cell = self.desktop_data[grid_y][grid_x]
+            if cell and cell.get('buildingType'):
+                building_type = cell['buildingType']
+                building_data = BuildingFactory.GetBuildingById(building_type)
+                if building_data and building_data.get('desc'):
+                    self.selected_building_desc = building_data['desc']
+                    self.selected_building_pos = (grid_x, grid_y)
+                    self.needs_redraw = True
+                    return True
+        except (IndexError, KeyError) as e:
+            logger.error(f"Error selecting building: {e}")
+        return False
+        
+    def activate_building(self):
+        """Activate the currently selected building"""
+        if hasattr(self, 'selected_building_pos'):
+            grid_x, grid_y = self.selected_building_pos
+            try:
+                cell = self.desktop_data[grid_y][grid_x]
+                if cell and cell.get('buildingType'):
+                    self.sendMessage(PlayerAction.ActivateBuilding.value, self.username, str(grid_x), str(grid_y), None, None)
+                    return True
+            except (IndexError, KeyError) as e:
+                logger.error(f"Error activating building: {e}")
+        return False
+        
+    def upgrade_building(self):
+        """Upgrade the currently selected building"""
+        if hasattr(self, 'selected_building_pos'):
+            grid_x, grid_y = self.selected_building_pos
+            try:
+                cell = self.desktop_data[grid_y][grid_x]
+                if cell and cell.get('buildingType'):
+                    self.sendMessage(PlayerAction.UpgradeBuilding.value, self.username, str(grid_x), str(grid_y), None, None)
+                    return True
+            except (IndexError, KeyError) as e:
+                logger.error(f"Error upgrading building: {e}")
+        return False
 
     def is_mouse_in_grid(self, pos):
         """Check if mouse is in the game grid"""
@@ -869,48 +1015,44 @@ class Client:
                     if event.key == pygame.K_ESCAPE:
                         self.handle_quit()
                 elif event.type == pygame.MOUSEBUTTONDOWN:
-                    if event.button == 1:  # Left click
-                        if self.game_state == GameStatus.IN_GAME.value:
+                    if event.button == pygame.BUTTON_LEFT:
+                        # Handle button clicks
+                        if self.handle_button_click(event.pos):
+                            continue
+                        
+                        # Check if click is in toolbar
+                        if self.is_mouse_in_toolbar(event.pos):
+                            piece = self.get_toolbar_piece_at_pos(event.pos)
+                            if piece:
+                                self.selected_piece = piece.copy()
+                                self.selected_building_desc = None  # Clear building description when selecting piece
+                                self.needs_redraw = True
+                            continue
+                        
+                        # Check if click is in grid
+                        if self.is_mouse_in_grid(event.pos):
+                            grid_x, grid_y = self.get_grid_pos_from_mouse(event.pos)
                             if self.selected_piece:
                                 # Try to place the piece
-                                if self.is_mouse_in_grid(event.pos):
-                                    grid_x, grid_y = self.get_grid_pos_from_mouse(event.pos)
-                                    logger.debug(f"Placing piece at ({grid_x}, {grid_y})")
-                                    if self.check_valid_placement(self.selected_piece, grid_x, grid_y):
-                                        # 计算旋转次数
-                                        original_shape = self.selected_piece.get('original_shape', self.selected_piece['shape'])
-                                        current_shape = self.selected_piece['shape']
-                                        rotate_count = self.calculate_rotation_count(original_shape, current_shape)
-                                        logger.debug(f"Rotating piece {rotate_count} times")
-                                        # 放置棋子
-                                        piece_id = self.selected_piece.get('id')
-                                        logger.debug(f'Place puzzle_id={piece_id}')
-                                        try:
-                                            self.place_piece(piece_id, rotate_count)
-                                        except Exception as e:
-                                            logger.error(f"Failed to place piece: {e}")
-                                        finally:
-                                            self.needs_redraw = True
-                                        
-                                        # 取消选中状态
-                                        self.selected_piece = None
-                                        last_piece_pos = None
-                                    else:
-                                        logger.error(f'invalid placement {self.selected_piece} at ({grid_x}, {grid_y})')
-                                else:
-                                    logger.error("Invalid placement")
-                            else:
-                                # Try to select a piece from toolbar
-                                piece = self.get_toolbar_piece_at_pos(event.pos)
-                                if piece:
-                                    self.selected_piece = piece.copy()
+                                if self.check_valid_placement(self.selected_piece, grid_x, grid_y):
+                                    rotate = self.calculate_rotation_count(
+                                        self.selected_piece['shape'],
+                                        self.selected_piece.get('rotated_cells', [])
+                                    )
+                                    self.place_piece(self.selected_piece['id'], rotate)
+                                    self.selected_piece = None
                                     self.needs_redraw = True
-                        self.handle_button_click(event.pos)
-                    elif event.button == 3:  # Right click
-                        # Cancel piece selection
+                            else:
+                                # Try to select a building
+                                self.select_building_at_pos(grid_x, grid_y)
+                    elif event.button == pygame.BUTTON_RIGHT:
                         if self.selected_piece:
-                            self.selected_piece = None
-                            last_piece_pos = None
+                            # Rotate piece on right click
+                            self.selected_piece = self.rotate_piece(self.selected_piece)
+                            self.needs_redraw = True
+                        else:
+                            # Clear building selection on right click
+                            self.selected_building_desc = None
                             self.needs_redraw = True
                 elif event.type == pygame.MOUSEMOTION:
                     self.mouse_pos = event.pos
@@ -923,15 +1065,12 @@ class Client:
                 elif event.type == pygame.MOUSEWHEEL:
                     # Rotate selected piece
                     if self.selected_piece:
-                        # 向下滚动时y为负，顺时针旋转
-                        # 向上滚动时y为正，逆时针旋转
                         if event.y < 0:  # 向下滚动
                             # 顺时针旋转
                             self.selected_piece['rotation'] = (self.selected_piece.get('rotation', 0) + 1) % 4
                         else:  # 向上滚动
                             # 逆时针旋转
                             self.selected_piece['rotation'] = (self.selected_piece.get('rotation', 0) - 1) % 4
-                        
                         # 获取形状的相对坐标
                         shape_helper = ShapeHelper()
                         cells = shape_helper.GetShape(self.selected_piece['shape'])
