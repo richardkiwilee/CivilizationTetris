@@ -426,38 +426,16 @@ class Client:
             
             # Draw description text if building is selected
             if self.selected_building_desc:
-                text_surface = self.font.render(self.selected_building_desc, True, (0, 0, 0))
-                text_rect = text_surface.get_rect()
-                text_x = TOP_MARGIN_SQUARE_WIDTH + 10
-                text_y = 10
-                # Handle text wrapping if needed
-                max_width = TOP_MARGIN_INFO_WIDTH - 20
-                if text_rect.width > max_width:
-                    words = self.selected_building_desc.split()
-                    lines = []
-                    current_line = []
-                    current_width = 0
-                    
-                    for word in words:
-                        word_surface = self.font.render(word + ' ', True, (0, 0, 0))
-                        word_width = word_surface.get_width()
+                line_height = self.font.get_height()
+                for i, line in enumerate(self.selected_building_desc):
+                    if line:  # 只渲染非空行
+                        desc_text = self.font.render(line, True, BLACK)
+                        desc_rect = desc_text.get_rect()
+                        desc_rect.x = TOP_MARGIN_SQUARE_WIDTH + 10
+                        desc_rect.y = 10 + i * (line_height + 5)  # 每行之间留5像素间距
+                        self.screen.blit(desc_text, desc_rect)
                         
-                        if current_width + word_width <= max_width:
-                            current_line.append(word)
-                            current_width += word_width
-                        else:
-                            lines.append(' '.join(current_line))
-                            current_line = [word]
-                            current_width = word_width
-                    
-                    if current_line:
-                        lines.append(' '.join(current_line))
-                    
-                    for i, line in enumerate(lines):
-                        line_surface = self.font.render(line, True, (0, 0, 0))
-                        self.screen.blit(line_surface, (text_x, text_y + i * 25))
-                else:
-                    self.screen.blit(text_surface, (text_x, text_y))
+
             
             # Draw action buttons
             for button in self.action_buttons:
@@ -857,7 +835,14 @@ class Client:
                 if building_id is not None:
                     building_data = self.BuildingFactory.GetBuildingById(building_id)
                     common_text, activate_text, passive_text = self.BuildingFactory.GetTextById(building_id)
-                    self.selected_building_desc = common_text + '\n' + activate_text + '\n' + passive_text
+                    # 将描述文本组织成列表，便于逐行渲染
+                    self.selected_building_desc = []
+                    if common_text:
+                        self.selected_building_desc.append(common_text)
+                    if activate_text:
+                        self.selected_building_desc.append(activate_text)
+                    if passive_text:
+                        self.selected_building_desc.append(passive_text)
                     self.selected_building_pos = (grid_x, grid_y)
                     # Enable/disable buttons based on ownership
                     is_owner = cell.get('owner') == self.username
