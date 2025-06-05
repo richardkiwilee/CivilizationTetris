@@ -147,17 +147,21 @@ class Client:
         button_x = TOP_MARGIN_SQUARE_WIDTH + BUTTON_MARGIN
         activate_button = {
             'text': '激活建筑',
-            'rect': pygame.Rect(button_x, button_y, button_width, BUTTON_HEIGHT)
+            'rect': pygame.Rect(button_x, button_y, button_width, BUTTON_HEIGHT),
+            'enabled': False
         }
         
         # Upgrade building button
         button_x = TOP_MARGIN_SQUARE_WIDTH + 2 * BUTTON_MARGIN + button_width
         upgrade_button = {
             'text': '升级建筑',
-            'rect': pygame.Rect(button_x, button_y, button_width, BUTTON_HEIGHT)
+            'rect': pygame.Rect(button_x, button_y, button_width, BUTTON_HEIGHT),
+            'enabled': False
         }
         
         self.action_buttons = [activate_button, upgrade_button]
+        self.last_click_time = 0  # For tracking double clicks
+        self.last_click_pos = None
         
         # Description area
         self.selected_building_desc = None
@@ -455,12 +459,15 @@ class Client:
             
             # Draw action buttons
             for button in self.action_buttons:
-                # Draw button background
-                pygame.draw.rect(self.screen, (220, 220, 220), button['rect'])
+                # Draw button background with different color based on enabled state
+                bg_color = (220, 220, 220) if button['enabled'] else (180, 180, 180)
+                pygame.draw.rect(self.screen, bg_color, button['rect'])
                 # Draw button border
-                pygame.draw.rect(self.screen, BLACK, button['rect'], 2)
+                border_color = BLACK if button['enabled'] else (150, 150, 150)
+                pygame.draw.rect(self.screen, border_color, button['rect'], 2)
                 # Draw button text
-                text_surface = self.font.render(button['text'], True, BLACK)
+                text_color = BLACK if button['enabled'] else (100, 100, 100)
+                text_surface = self.font.render(button['text'], True, text_color)
                 text_rect = text_surface.get_rect(center=button['rect'].center)
                 self.screen.blit(text_surface, text_rect)
             
@@ -765,7 +772,7 @@ class Client:
         
         # Check action buttons
         for button in self.action_buttons:
-            if button['rect'].collidepoint(pos):
+            if button['rect'].collidepoint(pos) and button['enabled']:
                 if button['text'] == '激活建筑':
                     # Handle activate building
                     if hasattr(self, 'selected_building_pos'):
@@ -842,14 +849,21 @@ class Client:
         """Select a building at the given grid position and update description"""
         try:
             cell = self.desktop_data[grid_y][grid_x]
-            if cell and cell.get('buildingType'):
-                building_type = cell['buildingType']
-                building_data = BuildingFactory.GetBuildingById(building_type)
-                if building_data and building_data.get('desc'):
-                    self.selected_building_desc = building_data['desc']
-                    self.selected_building_pos = (grid_x, grid_y)
-                    self.needs_redraw = True
-                    return True
+            if cell:
+                building_id = cell.get('building_id')
+                if building_id is not None:
+                    building_data = BuildingFactory.GetBuildingById(building_id)
+                    if building_data and building_data.get('desc'):
+                        self.selected_building_desc = building_data['desc']
+                        self.selected_building_pos = (grid_x, grid_y)
+                        
+                        # Enable/disable buttons based on ownership
+                        is_owner = cell.get('owner') == self.username
+                        for button in self.action_buttons:
+                            button['enabled'] = is_owner
+                        
+                        self.needs_redraw = True
+                        return True
         except (IndexError, KeyError) as e:
             logger.error(f"Error selecting building: {e}")
         return False
@@ -1020,6 +1034,9 @@ class Client:
                         if self.handle_button_click(event.pos):
                             continue
                         
+                        # Get current time for double-click detection
+                        current_time = pygame.time.get_ticks()
+                        
                         # Check if click is in toolbar
                         if self.is_mouse_in_toolbar(event.pos):
                             piece = self.get_toolbar_piece_at_pos(event.pos)
@@ -1043,12 +1060,27 @@ class Client:
                                     self.selected_piece = None
                                     self.needs_redraw = True
                             else:
-                                # Try to select a building
-                                self.select_building_at_pos(grid_x, grid_y)
+                                # Check for double click
+                                is_double_click = False
+                                if self.last_click_pos:
+                                    last_x, last_y = self.last_click_pos
+                                    if last_x == grid_x and last_y == grid_y:
+                                        if current_time - self.last_click_time < 500:  # 500ms for double click
+                                            is_double_click = True
+                                
+                                if is_double_click:
+                                    # Try to select building on double click
+                                    cell = self.desktop_data[grid_y][grid_x]
+                                    if cell and cell.get('buildingType'):
+                                        self.select_building_at_pos(grid_x, grid_y)
+                                
+                                # Update last click info
+                                self.last_click_time = current_time
+                                self.last_click_pos = (grid_x, grid_y)
                     elif event.button == pygame.BUTTON_RIGHT:
                         if self.selected_piece:
-                            # Rotate piece on right click
-                            self.selected_piece = self.rotate_piece(self.selected_piece)
+                            # Cancel piece selection on right click
+                            self.selected_piece = None
                             self.needs_redraw = True
                         else:
                             # Clear building selection on right click
