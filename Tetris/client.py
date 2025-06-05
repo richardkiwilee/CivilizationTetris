@@ -856,17 +856,16 @@ class Client:
                 building_id = cell.get('building_id')
                 if building_id is not None:
                     building_data = self.BuildingFactory.GetBuildingById(building_id)
-                    if building_data and building_data.get('desc'):
-                        self.selected_building_desc = building_data['desc']
-                        self.selected_building_pos = (grid_x, grid_y)
-                        
-                        # Enable/disable buttons based on ownership
-                        is_owner = cell.get('owner') == self.username
-                        for button in self.action_buttons:
-                            button['enabled'] = is_owner
-                        
-                        self.needs_redraw = True
-                        return True
+                    common_text, activate_text, passive_text = self.BuildingFactory.GetTextById(building_id)
+                    self.selected_building_desc = common_text + '\n' + activate_text + '\n' + passive_text
+                    self.selected_building_pos = (grid_x, grid_y)
+                    # Enable/disable buttons based on ownership
+                    is_owner = cell.get('owner') == self.username
+                    for button in self.action_buttons:
+                        button['enabled'] = is_owner
+                    
+                    self.needs_redraw = True
+                    return True
         except (IndexError, KeyError) as e:
             logger.error(f"Error selecting building: {e}")
         return False

@@ -27,13 +27,17 @@ class BuildingFactory:
                 shape = building.get('shape')
                 tags = building.get('tags', '').split(',')
                 
+                # 解析common
+                common_element = building.find('Desc')
+                common_text = common_element.get('text') if common_element is not None else ''
+                
                 # 创建建筑实例
                 building_instance = dict()
                 building_instance['id'] = building_id
                 building_instance['name'] = name
                 building_instance['shape'] = ShapeHelper().GetShape(shape)
                 building_instance['tags'] = [tag.strip() for tag in tags if tag.strip()]
-
+                building_instance['desc'] = common_text
                 
                 # 解析升级成本
                 cost_element = building.find('Cost')
@@ -54,10 +58,6 @@ class BuildingFactory:
                                 upgrade_costs[level][PlayerResource[resource_type].value] = int(amount)
                     
                     building_instance['cost'] = upgrade_costs
-                # 解析描述
-                desc_element = building.find('desc')
-                if desc_element is not None:
-                    building_instance['desc'] = desc_element.text
                 # 解析Activate
                 activate_element = building.find('Activate')
                 if activate_element is not None:
@@ -88,9 +88,23 @@ class BuildingFactory:
         """获取所有建筑实例"""
         return self.buildings
 
+    def GetTextById(self, id):
+        building = self.GetBuildingById(id)
+        common_text = building.get('desc', '')
+        activate_text = ''
+        if building.get('activate') and building['activate'].find('Desc') is not None:
+            activate_text = '激活时: ' + building['activate'].find('Desc').get('text')
+        passive_text = ''
+        if building.get('passive') and building['passive'].find('Desc') is not None:
+            passive_text = '被动时: ' + building['passive'].find('Desc').get('text')
+        return common_text, activate_text, passive_text
+
+
 if __name__ == '__main__':
     main = BuildingFactory()
     main.ReadConfig()
-    building = main.GetBuildingById(59)
+    building = main.GetBuildingById(51)
     print(building)
     print(main.GetCostById(59, 0))
+    print(main.GetTextById(51))
+    

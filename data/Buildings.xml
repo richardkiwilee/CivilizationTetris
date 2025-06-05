@@ -33,7 +33,7 @@
             <Resource Type="Wood" Amount="150/250/400"/>
         </Cost>
         <Activate>
-            <desc text="范围2/2/3内的平原提供驻兵1/2/3，农田提供驻兵3/3/5"/>
+            <Desc text="范围2/2/3内的平原提供驻兵1/2/3，农田提供驻兵3/3/5"/>
             <Effect Type="Range" Range="2/2/3">
                 <Trigger Type="Terrain" Terrain="Plain" BounsType="Army" BounsCount="1/2/3"/>
                 <Trigger Type="Terrain" Terrain="Farmland" BounsType="Army" BounsCount="3/3/5"/>
@@ -48,7 +48,7 @@
             <Resource Type="Gold" Amount="50/100/150"/>
         </Cost>
         <Passive>
-            <desc text="相邻的生产建筑激活时提供15/20/25金币"/>
+            <Desc text="相邻的生产建筑激活时提供15/20/25金币"/>
             <Trigger Type="Adjacent" Terrain="Production" ActionType="Activate" BounsType="Gold" BounsCount="15/20/25"/>
         </Passive>
     </Building>
@@ -60,7 +60,7 @@
             <Resource Type="Gold" Amount="50/100/150"/>
         </Cost>
         <Activate>
-            <desc text="每与一个生产建筑或农田相连, 征收6/9/12金币"/>
+            <Desc text="每与一个生产建筑或农田相连, 征收6/9/12金币"/>
             <Effect Type="Connected" Terrain="Production" BounsType="Gold" BounsCount="6/9/12"/>
             <Effect Type="Connected" Terrain="Farmland" BounsType="Gold" BounsCount="6/9/12"/>
         </Activate>
@@ -71,7 +71,7 @@
             <Resource Type="Wood" Amount="100/200/350"/>
         </Cost>
         <Activate>
-            <desc text="范围1/2/3内的平原变成农田 提供驻兵5/10/15"/>
+            <Desc text="范围1/2/3内的平原变成农田 提供驻兵5/10/15"/>
             <Effect Type="Range" Range="1/2/3">
                 <Trigger Type="Transaction" From="Plain" To="Farmland"/>
             </Effect>
@@ -85,7 +85,7 @@
             <Resource Type="Stone" Amount="0/0/50"/>
         </Cost>
         <Activate>
-            <desc text="范围1/2/3内的平原和森林变成城市单元格"/>
+            <Desc text="范围1/2/3内的平原和森林变成城市单元格"/>
             <Effect Type="Range" Range="1/2/3">
                 <Trigger Type="Transaction" From="Plain" To="Urban"/>
                 <Trigger Type="Transaction" From="Forest" To="Urban"/>
@@ -113,7 +113,7 @@
             <Resource Type="Wood" Amount="150/250/400"/>
         </Cost>
         <Activate>
-            <desc text="每个相连的街坊单元格提供5/7/10粮食"/>
+            <Desc text="每个相连的街坊单元格提供5/7/10粮食"/>
             <Effect Type="Connected" Terrain="Urban" BounsType="Food" BounsCount="5/7/10"/>
         </Activate>
     </Building> 
@@ -123,7 +123,7 @@
             <Resource Type="Food" Amount="150/250/400"/>
         </Cost>
         <Activate>
-            <desc text="每个相连的街坊单元格提供5/7/10木头"/>
+            <Desc text="每个相连的街坊单元格提供5/7/10木头"/>
             <Effect Type="Connected" Terrain="Urban" BounsType="Wood" BounsCount="5/7/10"/>
         </Activate>
     </Building> 
@@ -136,7 +136,7 @@
             <Resource Type="Gold" Amount="50/100/250"/>
         </Cost>
         <Activate>
-            <desc text="提供信仰1/2/3 最小相连区域的每个单元格提供1/2/3箭"/>
+            <Desc text="提供信仰1/2/3 最小相连区域的每个单元格提供1/2/3箭"/>
             <Effect Type="None" BounsType="Faith" BounsCount="1/2/3"/>
             <Effect Type="MinConnected" BounsType="Army" BounsCount="1/2/3"/>
         </Activate>
@@ -150,7 +150,7 @@
             <Resource Type="Gold" Amount="0/50/150"/>
         </Cost>
         <Passive>
-            <desc text="如果毗邻宗教建筑 总计10/20/30的粮食、木头、石头"/>
+            <Desc text="如果毗邻宗教建筑 总计10/20/30的粮食、木头、石头"/>
             <Trigger Type="Adjacent" Terrain="Faith" ActionType="Exists" BounsType="Food" BounsCount="10/20/30"/>        
             <Trigger Type="Adjacent" Terrain="Faith" ActionType="Exists" BounsType="Wood" BounsCount="10/20/30"/>        
             <Trigger Type="Adjacent" Terrain="Faith" ActionType="Exists" BounsType="Stone" BounsCount="10/20/30"/>        
@@ -164,7 +164,7 @@
         </Cost>
         <Activate Cost="True">
             <Cost Type="Faith" Amount="1/3/5"/>
-            <desc text="消耗1/3/5信仰信仰 获得8/16/24的粮食、木头、石头"/>
+            <Desc text="消耗1/3/5信仰信仰 获得8/16/24的粮食、木头、石头"/>
             <Effect Type="MinConnected" BounsType="Food" BounsCount="8/16/24"/>
             <Effect Type="MinConnected" BounsType="Wood" BounsCount="8/16/24"/>
             <Effect Type="MinConnected" BounsType="Stone" BounsCount="8/16/24"/>
@@ -178,7 +178,7 @@
         </Cost>
         <Activate Cost="True">
             <Cost Type="Faith" Amount="1/3/5"/>
-            <desc text="每与1种环境毗邻 获得15/25/35的粮食、木头、石头 驻兵5/10/15"/>
+            <Desc text="每与1种环境毗邻 获得15/25/35的粮食、木头、石头 驻兵5/10/15"/>
             <Effect Type="MinConnected" BounsType="Food" BounsCount="8/16/24"/>
             <Effect Type="MinConnected" BounsType="Wood" BounsCount="8/16/24"/>
             <Effect Type="MinConnected" BounsType="Stone" BounsCount="8/16/24"/>
@@ -203,7 +203,7 @@
             <Resource Type="Food" Amount="0/100/100"/>
         </Cost>
         <Activate>
-            <desc text="范围1/2/3的平原变成农田"/>
+            <Desc text="范围1/2/3的平原变成农田"/>
             <Effect Type="Range" Range="1/2/3">
                 <Trigger Type="Transaction" From="Plain" To="Farmland"/>
             </Effect>
@@ -215,7 +215,7 @@
             <Resource Type="Food" Amount="150/200/200"/>
         </Cost>
         <Activate>
-            <desc text="范围2/2/3的森林变成平原并获得8/12/12木头"/>
+            <Desc text="范围2/2/3的森林变成平原并获得8/12/12木头"/>
             <Effect Type="Range" Range="2/2/3">
                 <Trigger Type="Transaction" From="Forest" To="Plain"/>
             </Effect>
@@ -228,7 +228,7 @@
             <Resource Type="Food" Amount="150/200/200"/>
         </Cost>
         <Activate>
-            <desc text="范围2/2/3的森林变成平原并获得8/12/12木头"/>
+            <Desc text="范围2/2/3的森林变成平原并获得8/12/12木头"/>
             <Effect Type="Range" Range="2/2/3" BounsType="Wood" BounsCount="8/12/12"/>
             <Effect Type="Range" Range="2/2/3">
                 <Trigger Type="Transaction" From="Forest" To="Plain"/>
@@ -242,7 +242,7 @@
             <Resource Type="Gold" Amount="50/100/100"/>
         </Cost>
         <Activate>
-            <desc text="每与一个山地单元格相连 获得20/30/40石头"/>
+            <Desc text="每与一个山地单元格相连 获得20/30/40石头"/>
             <Effect Type="Connected" Terrain="Mountain" BounsType="Stone" BounsCount="20/30/40"/>
         </Activate>
     </Building>
@@ -252,7 +252,7 @@
             <Resource Type="Wood" Amount="400/700/700"/>
         </Cost>
         <Activate>
-            <desc text="每与一个森林单元格相连 得3/5/7箭"/>
+            <Desc text="每与一个森林单元格相连 得3/5/7箭"/>
             <Effect Type="Connected" Terrain="Forest" BounsType="Army" BounsCount="3/5/7" ArmyType="Range"/>
         </Activate>
     </Building>
@@ -264,7 +264,7 @@
             <Resource Type="Gold" Amount="0/0/150"/>
         </Cost>
         <Activate>
-            <desc text="驻兵10/15/20 将毗邻的森林单元格变成平原 每个成功转化获得3/4/5剑"/>
+            <Desc text="驻兵10/15/20 将毗邻的森林单元格变成平原 每个成功转化获得3/4/5剑"/>
             <Effect Type="Garrison" BounsCount="10/15/20" ArmyType="Light"/>
             <Effect Type="Connected" Terrain="Forest">
                 <Trigger Type="Transaction" From="Forest" To="Plain"/>
@@ -279,7 +279,7 @@
             <Resource Type="Stone" Amount="100/200/200"/>
         </Cost>
         <Activate>
-            <desc text="每与1个山地puzzle相邻 得10/15/20剑"/>
+            <Desc text="每与1个山地puzzle相邻 得10/15/20剑"/>
             <Effect Type="Connected" Terrain="Mountain" BounsType="Army" BounsCount="10/15/20" ArmyType="Light"/>
         </Activate>
     </Building>
@@ -290,7 +290,7 @@
             <Resource Type="Stone" Amount="150/250/250"/>
         </Cost>
         <Activate>
-            <desc text="同行同列的每个山地puzzle 驻兵7/10/12箭"/>
+            <Desc text="同行同列的每个山地puzzle 驻兵7/10/12箭"/>
             <Effect Type="Row" Terrain="Mountain" BounsType="Army" BounsCount="7/10/12" ArmyType="Range"/>
             <Effect Type="Column" Terrain="Mountain" BounsType="Army" BounsCount="7/10/12" ArmyType="Range"/>
         </Activate>
@@ -302,7 +302,7 @@
             <Resource Type="Gold" Amount="50/100/100"/>
         </Cost>
         <Activate>
-            <desc text="行同列的每个建筑 产出20/30/40石头"/>
+            <Desc text="行同列的每个建筑 产出20/30/40石头"/>
             <Effect Type="Row" BounsType="Stone" BounsCount="20/30/40"/>
             <Effect Type="Column" BounsType="Stone" BounsCount="20/30/40"/>
         </Activate>
@@ -314,7 +314,7 @@
             <Resource Type="Wood" Amount="0/100/100"/>
         </Cost>
         <Activate>
-            <desc text="每个毗邻建筑获得3/5/7金币"/>
+            <Desc text="每个毗邻建筑获得3/5/7金币"/>
             <Effect Type="Connected" BounsType="Gold" BounsCount="3/5/7"/>
         </Activate>
     </Building>
@@ -326,7 +326,7 @@
             <Resource Type="Gold" Amount="200/300/300"/>
         </Cost>
         <Activate>
-            <desc text="每个毗邻建筑获得3/5/7剑"/>
+            <Desc text="每个毗邻建筑获得3/5/7剑"/>
             <Effect Type="Connected" BounsType="Army" BounsCount="3/5/7" ArmyType="Light"/>
         </Activate>
     </Building>
@@ -337,7 +337,7 @@
             <Resource Type="Stone" Amount="50/50/50"/>
         </Cost>
         <Activate>
-            <desc text="每个毗邻建筑获得3/5/7粮食"/>
+            <Desc text="每个毗邻建筑获得3/5/7粮食"/>
             <Effect Type="Connected" BounsType="Food" BounsCount="3/5/7"/>
         </Activate>
     </Building>
@@ -349,7 +349,7 @@
             <Resource Type="Gold" Amount="0/0/200"/>
         </Cost>
         <Activate>
-            <desc text="每个毗邻山地驻兵7/10/12箭"/>
+            <Desc text="每个毗邻山地驻兵7/10/12箭"/>
             <Effect Type="Connected" Terrain="Mountain" BounsType="Army" BounsCount="7/10/12" ArmyType="Range"/>
         </Activate>
     </Building>
@@ -359,7 +359,7 @@
             <Resource Type="Gold" Amount="150/200/200"/>
         </Cost>
         <Activate>
-            <desc text="每个毗邻山地获得20/30/40石头"/>
+            <Desc text="每个毗邻山地获得20/30/40石头"/>
             <Effect Type="Connected" Terrain="Mountain" BounsType="Stone" BounsCount="20/30/40"/>
         </Activate>
     </Building>
@@ -370,7 +370,7 @@
             <Resource Type="Stone" Amount="50/50/50"/>
         </Cost>
         <Activate>
-            <desc text="每个毗邻山地获得3/5/7金币"/>
+            <Desc text="每个毗邻山地获得3/5/7金币"/>
             <Effect Type="Connected" Terrain="Mountain" BounsType="Gold" BounsCount="3/5/7"/>
         </Activate>
     </Building>
@@ -381,7 +381,7 @@
             <Resource Type="Food" Amount="250/400/400"/>
         </Cost>
         <Activate>
-            <desc text="每个毗邻建筑驻兵7/10/12剑"/>
+            <Desc text="每个毗邻建筑驻兵7/10/12剑"/>
             <Effect Type="Connected" BounsType="Army" BounsCount="7/10/12" ArmyType="Light"/>
         </Activate>
     </Building>
@@ -391,7 +391,7 @@
             <Resource Type="Gold" Amount="150/250/250"/>
         </Cost>
         <Activate>
-            <desc text="每个毗邻农田获得3/5/7粮食"/>
+            <Desc text="每个毗邻农田获得3/5/7粮食"/>
             <Effect Type="Connected" Terrain="Farmland" BounsType="Food" BounsCount="3/5/7"/>
         </Activate>
     </Building>
@@ -402,7 +402,7 @@
             <Resource Type="Stone" Amount="0/50/50"/>
         </Cost>
         <Activate>
-            <desc text="每个毗邻森林获得3/5/7木头"/>
+            <Desc text="每个毗邻森林获得3/5/7木头"/>
             <Effect Type="Connected" Terrain="Forest" BounsType="Wood" BounsCount="3/5/7"/>
         </Activate>
     </Building>
@@ -413,7 +413,7 @@
             <Resource Type="Stone" Amount="150/200/200"/>
         </Cost>
         <Activate>
-            <desc text="每个毗邻山地驻兵7/10/12剑"/>
+            <Desc text="每个毗邻山地驻兵7/10/12剑"/>
             <Effect Type="Connected" Terrain="Mountain" BounsType="Army" BounsCount="7/10/12" ArmyType="Light"/>
         </Activate>
     </Building>
@@ -423,7 +423,7 @@
             <Resource Type="Wood" Amount="150/200/200"/>
         </Cost>
         <Activate>
-            <desc text="每个毗邻农田获得3/5/7粮食"/>
+            <Desc text="每个毗邻农田获得3/5/7粮食"/>
             <Effect Type="Connected" Terrain="Farmland" BounsType="Food" BounsCount="3/5/7"/>
         </Activate>
     </Building>
@@ -434,7 +434,7 @@
             <Resource Type="Gold" Amount="0/100/100"/>
         </Cost>
         <Activate>
-            <desc text="每个毗邻农田获得3/5/7粮食"/>
+            <Desc text="每个毗邻农田获得3/5/7粮食"/>
             <Effect Type="Connected" Terrain="Farmland" BounsType="Food" BounsCount="3/5/7"/>
         </Activate>
     </Building>
@@ -445,7 +445,7 @@
             <Resource Type="Wood" Amount="0/200/200"/>
         </Cost>
         <Activate>
-            <desc text="每个毗邻建筑驻兵7/10/12剑"/>
+            <Desc text="每个毗邻建筑驻兵7/10/12剑"/>
             <Effect Type="Connected" BounsType="Army" BounsCount="7/10/12" ArmyType="Light"/>
         </Activate>
     </Building>
@@ -457,7 +457,7 @@
             <Resource Type="Stone" Amount="0/0/100"/>
         </Cost>
         <Activate>
-            <desc text="每个毗邻建筑驻兵7/10/12箭"/>
+            <Desc text="每个毗邻建筑驻兵7/10/12箭"/>
             <Effect Type="Connected" BounsType="Army" BounsCount="7/10/12" ArmyType="Range"/>
         </Activate>
     </Building>
@@ -468,7 +468,7 @@
             <Resource Type="Gold" Amount="250/400/400"/>
         </Cost>
         <Activate>
-            <desc text="同行或同列的每一个敌方军事建筑 得10/15/20斧"/>
+            <Desc text="同行或同列的每一个敌方军事建筑 得10/15/20斧"/>
             <Effect Type="Row" BounsType="Army" BounsCount="10/15/20" ArmyType="Heavy" Enemy="true"/>
             <Effect Type="Column" BounsType="Army" BounsCount="10/15/20" ArmyType="Heavy" Enemy="true"/>
         </Activate>
@@ -481,7 +481,7 @@
             <Resource Type="Stone" Amount="0/0/100"/>
         </Cost>
         <Activate>
-            <desc text="范围2/2/2的所有敌方部队减员8/12/16 驻兵10/15/20斧"/>
+            <Desc text="范围2/2/2的所有敌方部队减员8/12/16 驻兵10/15/20斧"/>
             <Effect Type="Range" Range="2/2/2" BounsType="Army" BounsCount="-8/-12/-16" Enemy="true"/>
             <Effect Type="Garrison" BounsCount="10/15/20" ArmyType="Heavy"/>
         </Activate>
@@ -493,7 +493,7 @@
             <Resource Type="Food" Amount="0/100/100"/>
         </Cost>
         <Activate>
-            <desc text="同行或同列的每一个敌方建筑 获得15/25/35金币"/>
+            <Desc text="同行或同列的每一个敌方建筑 获得15/25/35金币"/>
             <Effect Type="Row" BounsType="Gold" BounsCount="15/25/35" Enemy="true"/>
             <Effect Type="Column" BounsType="Gold" BounsCount="15/25/35" Enemy="true"/>
         </Activate>
@@ -505,7 +505,7 @@
             <Resource Type="Food" Amount="50/100/100"/>
         </Cost>
         <Activate>
-            <desc text="每个毗邻的森林单元格提供10/15/20金币 若被森林包围 额外获得50/100/150金币"/>
+            <Desc text="每个毗邻的森林单元格提供10/15/20金币 若被森林包围 额外获得50/100/150金币"/>
             <Effect Type="Connected" Terrain="Forest" BounsType="Gold" BounsCount="10/15/20"/>
             <Effect Type="Surrounded" Terrain="Forest" BounsType="Gold" BounsCount="50/100/150"/>
         </Activate>
@@ -516,7 +516,7 @@
             <Resource Type="Gold" Amount="500/800/800"/>
         </Cost>
         <Activate>
-            <desc text="每获得20金币 得2/3/4剑"/>
+            <Desc text="每获得20金币 得2/3/4剑"/>
             <Effect Type="GoldToArmy" Gold="20" BounsType="Army" BounsCount="2/3/4" ArmyType="Light"/>
         </Activate>
     </Building>
@@ -528,7 +528,7 @@
             <Resource Type="Stone" Amount="0/0/100"/>
         </Cost>
         <Activate>
-            <desc text="每个毗邻建筑驻兵7/10/12箭"/>
+            <Desc text="每个毗邻建筑驻兵7/10/12箭"/>
             <Effect Type="Connected" BounsType="Army" BounsCount="7/10/12" ArmyType="Range"/>
         </Activate>
     </Building>
@@ -539,7 +539,7 @@
             <Resource Type="Gold" Amount="0/100/100"/>
         </Cost>
         <Activate>
-            <desc text="每个毗邻森林获得3/5/7木头"/>
+            <Desc text="每个毗邻森林获得3/5/7木头"/>
             <Effect Type="Connected" Terrain="Forest" BounsType="Wood" BounsCount="3/5/7"/>
         </Activate>
     </Building>
@@ -549,7 +549,7 @@
             <Resource Type="Wood" Amount="150/250/250"/>
         </Cost>
         <Activate>
-            <desc text="每个毗邻农田获得3/5/7粮食"/>
+            <Desc text="每个毗邻农田获得3/5/7粮食"/>
             <Effect Type="Connected" Terrain="Farmland" BounsType="Food" BounsCount="3/5/7"/>
         </Activate>
     </Building>
@@ -561,7 +561,7 @@
             <Resource Type="Gold" Amount="200/300/300"/>
         </Cost>
         <Activate>
-            <desc text="每个毗邻建筑驻兵7/10/12箭"/>
+            <Desc text="每个毗邻建筑驻兵7/10/12箭"/>
             <Effect Type="Connected" BounsType="Army" BounsCount="7/10/12" ArmyType="Range"/>
         </Activate>
     </Building>
@@ -573,7 +573,7 @@
             <Resource Type="Gold" Amount="200/400/400"/>
         </Cost>
         <Activate>
-            <desc text="每个毗邻建筑驻兵7/10/12箭"/>
+            <Desc text="每个毗邻建筑驻兵7/10/12箭"/>
             <Effect Type="Connected" BounsType="Army" BounsCount="7/10/12" ArmyType="Range"/>
         </Activate>
     </Building>
@@ -584,7 +584,7 @@
             <Resource Type="Gold" Amount="50/100/100"/>
         </Cost>
         <Activate>
-            <desc text="每个毗邻农田获得3/5/7粮食"/>
+            <Desc text="每个毗邻农田获得3/5/7粮食"/>
             <Effect Type="Connected" Terrain="Farmland" BounsType="Food" BounsCount="3/5/7"/>
         </Activate>
     </Building>
@@ -595,19 +595,20 @@
             <Resource Type="Food" Amount="100/150/150"/>
         </Cost>
         <Activate>
-            <desc text="每个毗邻农田获得3/5/7粮食"/>
+            <Desc text="每个毗邻农田获得3/5/7粮食"/>
             <Effect Type="Connected" Terrain="Farmland" BounsType="Food" BounsCount="3/5/7"/>
         </Activate>
     </Building>
 
-    <Building id="51" Count="10" Name="丰腐之地" shape="O" tags="Production">
+    <Building id="51" Count="10" Name="丰饶之地" shape="O" tags="Production">
+        <Desc text="拥有丰饶之地, 就可以拥有无限的粮食。"/>
         <Cost>
             <Resource Type="Wood" Amount="50/100/100"/>
             <Resource Type="Food" Amount="50/100/100"/>
             <Resource Type="Gold" Amount="50/100/100"/>
         </Cost>
         <Activate>
-            <desc text="每个毗邻农田获得3/5/7粮食"/>
+            <Desc text="每个毗邻农田获得3/5/7粮食"/>
             <Effect Type="Connected" Terrain="Farmland" BounsType="Food" BounsCount="3/5/7"/>
         </Activate>
     </Building>
@@ -618,7 +619,7 @@
             <Resource Type="Food" Amount="50/100/100"/>
         </Cost>
         <Activate>
-            <desc text="每个毗邻农田获得3/5/7粮食"/>
+            <Desc text="每个毗邻农田获得3/5/7粮食"/>
             <Effect Type="Connected" Terrain="Farmland" BounsType="Food" BounsCount="3/5/7"/>
         </Activate>
     </Building>
@@ -631,7 +632,7 @@
             <Resource Type="Stone" Amount="0/300/300"/>
         </Cost>
         <Activate>
-            <desc text="每个毗邻建筑驻兵7/10/12箭"/>
+            <Desc text="每个毗邻建筑驻兵7/10/12箭"/>
             <Effect Type="Connected" BounsType="Army" BounsCount="7/10/12" ArmyType="Range"/>
         </Activate>
     </Building>
@@ -643,7 +644,7 @@
             <Resource Type="Stone" Amount="0/50/50"/>
         </Cost>
         <Activate>
-            <desc text="每个毗邻森林获得3/5/7木头"/>
+            <Desc text="每个毗邻森林获得3/5/7木头"/>
             <Effect Type="Connected" Terrain="Forest" BounsType="Wood" BounsCount="3/5/7"/>
         </Activate>
     </Building>
@@ -654,7 +655,7 @@
             <Resource Type="Food" Amount="0/200/200"/>
         </Cost>
         <Activate>
-            <desc text="每个毗邻建筑驻兵10/15/20剑"/>
+            <Desc text="每个毗邻建筑驻兵10/15/20剑"/>
             <Effect Type="Connected" BounsType="Army" BounsCount="10/15/20" ArmyType="Light"/>
         </Activate>
     </Building>
@@ -665,7 +666,7 @@
             <Resource Type="Gold" Amount="0/100/100"/>
         </Cost>
         <Activate>
-            <desc text="每个毗邻建筑获得3/5/7信仰"/>
+            <Desc text="每个毗邻建筑获得3/5/7信仰"/>
             <Effect Type="Connected" BounsType="Faith" BounsCount="3/5/7"/>
         </Activate>
     </Building>
@@ -678,7 +679,7 @@
             <Resource Type="Stone" Amount="0/50/50"/>
         </Cost>
         <Activate>
-            <desc text="每个毗邻建筑获得3/5/7信仰"/>
+            <Desc text="每个毗邻建筑获得3/5/7信仰"/>
             <Effect Type="Connected" BounsType="Faith" BounsCount="3/5/7"/>
         </Activate>
     </Building>
@@ -690,7 +691,7 @@
             <Resource Type="Stone" Amount="0/50/50"/>
         </Cost>
         <Activate>
-            <desc text="每个毗邻建筑获得3/5/7信仰"/>
+            <Desc text="每个毗邻建筑获得3/5/7信仰"/>
             <Effect Type="Connected" BounsType="Faith" BounsCount="3/5/7"/>
         </Activate>
     </Building>
@@ -701,7 +702,7 @@
             <Resource Type="Stone" Amount="0/100/100"/>
         </Cost>
         <Activate>
-            <desc text="如果毗邻森林 获得信仰值3/5/7倍的粮食、木头和金币"/>
+            <Desc text="如果毗邻森林 获得信仰值3/5/7倍的粮食、木头和金币"/>
             <Effect Type="Connected" Terrain="Forest" BounsType="Food" BounsCount="3/5/7" FaithMultiplier="true"/>
             <Effect Type="Connected" Terrain="Forest" BounsType="Wood" BounsCount="3/5/7" FaithMultiplier="true"/>
             <Effect Type="Connected" Terrain="Forest" BounsType="Gold" BounsCount="3/5/7" FaithMultiplier="true"/>
@@ -713,7 +714,7 @@
             <Resource Type="Gold" Amount="200/300/300"/>
         </Cost>
         <Activate>
-            <desc text="获得1信仰和信仰值10/15/20倍的粮食"/>
+            <Desc text="获得1信仰和信仰值10/15/20倍的粮食"/>
             <Effect Type="Faith" BounsCount="1"/>
             <Effect Type="Food" BounsCount="10/15/20" FaithMultiplier="true"/>
         </Activate>
@@ -725,7 +726,7 @@
             <Resource Type="Food" Amount="100/150/150"/>
         </Cost>
         <Activate>
-            <desc text="获得1信仰和信仰值10/15/20倍的木材"/>
+            <Desc text="获得1信仰和信仰值10/15/20倍的木材"/>
             <Effect Type="Faith" BounsCount="1"/>
             <Effect Type="Wood" BounsCount="10/15/20" FaithMultiplier="true"/>
         </Activate>
@@ -739,7 +740,7 @@
             <Resource Type="Stone" Amount="0/200/200"/>
         </Cost>
         <Activate>
-            <desc text="获得1信仰 驻养信仰值3/4/5倍的剑"/>
+            <Desc text="获得1信仰 驻养信仰值3/4/5倍的剑"/>
             <Effect Type="Faith" BounsCount="1"/>
             <Effect Type="Garrison" BounsType="Army" BounsCount="3/4/5" ArmyType="Light" FaithMultiplier="true"/>
         </Activate>
@@ -753,7 +754,7 @@
             <Resource Type="Faith" Amount="10/20/20"/>
         </Cost>
         <Activate>
-            <desc text="每个毗邻建筑驻兵7/10/12箭"/>
+            <Desc text="每个毗邻建筑驻兵7/10/12箭"/>
             <Effect Type="Connected" BounsType="Army" BounsCount="7/10/12" ArmyType="Range"/>
         </Activate>
     </Building>
@@ -764,7 +765,7 @@
             <Resource Type="Food" Amount="50/150/150"/>
         </Cost>
         <Activate>
-            <desc text="每个毗邻建筑获得3/5/7信仰"/>
+            <Desc text="每个毗邻建筑获得3/5/7信仰"/>
             <Effect Type="Connected" BounsType="Faith" BounsCount="3/5/7"/>
         </Activate>
     </Building>
@@ -777,7 +778,7 @@
             <Resource Type="Stone" Amount="0/250/250"/>
         </Cost>
         <Activate>
-            <desc text="每个毗邻建筑获得3/5/7信仰"/>
+            <Desc text="每个毗邻建筑获得3/5/7信仰"/>
             <Effect Type="Connected" BounsType="Faith" BounsCount="3/5/7"/>
         </Activate>
     </Building>
@@ -788,7 +789,7 @@
             <Resource Type="Stone" Amount="0/100/100"/>
         </Cost>
         <Activate>
-            <desc text="每个毗邻建筑驻兵7/10/12剑"/>
+            <Desc text="每个毗邻建筑驻兵7/10/12剑"/>
             <Effect Type="Connected" BounsType="Army" BounsCount="7/10/12" ArmyType="Light"/>
         </Activate>
     </Building>
@@ -800,7 +801,7 @@
             <Resource Type="Gold" Amount="200/300/300"/>
         </Cost>
         <Activate>
-            <desc text="每个毗邻建筑驻兵7/10/12剑"/>
+            <Desc text="每个毗邻建筑驻兵7/10/12剑"/>
             <Effect Type="Connected" BounsType="Army" BounsCount="7/10/12" ArmyType="Light"/>
         </Activate>
     </Building>
@@ -812,7 +813,7 @@
             <Resource Type="Stone" Amount="0/150/150"/>
         </Cost>
         <Activate>
-            <desc text="每个毗邻建筑驻兵7/10/12剑"/>
+            <Desc text="每个毗邻建筑驻兵7/10/12剑"/>
             <Effect Type="Connected" BounsType="Army" BounsCount="7/10/12" ArmyType="Light"/>
         </Activate>
     </Building>
@@ -825,7 +826,7 @@
             <Resource Type="Stone" Amount="0/200/200"/>
         </Cost>
         <Activate>
-            <desc text="每个毗邻建筑驻兵7/10/12剑"/>
+            <Desc text="每个毗邻建筑驻兵7/10/12剑"/>
             <Effect Type="Connected" BounsType="Army" BounsCount="7/10/12" ArmyType="Light"/>
         </Activate>
     </Building>
@@ -838,7 +839,7 @@
             <Resource Type="Stone" Amount="0/200/200"/>
         </Cost>
         <Activate>
-            <desc text="每个毗邻建筑驻兵10/15/20剑"/>
+            <Desc text="每个毗邻建筑驻兵10/15/20剑"/>
             <Effect Type="Connected" BounsType="Army" BounsCount="10/15/20" ArmyType="Light"/>
         </Activate>
     </Building>
@@ -850,7 +851,7 @@
             <Resource Type="Gold" Amount="200/300/300"/>
         </Cost>
         <Activate>
-            <desc text="每个毗邻建筑驻兵7/10/12剑"/>
+            <Desc text="每个毗邻建筑驻兵7/10/12剑"/>
             <Effect Type="Connected" BounsType="Army" BounsCount="7/10/12" ArmyType="Light"/>
         </Activate>
     </Building>
@@ -863,7 +864,7 @@
             <Resource Type="Stone" Amount="0/100/100"/>
         </Cost>
         <Activate>
-            <desc text="每个毗邻建筑获得3/5/7粮食"/>
+            <Desc text="每个毗邻建筑获得3/5/7粮食"/>
             <Effect Type="Connected" BounsType="Food" BounsCount="3/5/7"/>
         </Activate>
     </Building>
@@ -875,7 +876,7 @@
             <Resource Type="Stone" Amount="0/100/100"/>
         </Cost>
         <Activate>
-            <desc text="每个毗邻建筑获得3/5/7粮食"/>
+            <Desc text="每个毗邻建筑获得3/5/7粮食"/>
             <Effect Type="Connected" BounsType="Food" BounsCount="3/5/7"/>
         </Activate>
     </Building>
@@ -887,7 +888,7 @@
             <Resource Type="Gold" Amount="0/200/200"/>
         </Cost>
         <Activate>
-            <desc text="每个毗邻建筑驻兵7/10/12剑"/>
+            <Desc text="每个毗邻建筑驻兵7/10/12剑"/>
             <Effect Type="Connected" BounsType="Army" BounsCount="7/10/12" ArmyType="Light"/>
         </Activate>
     </Building>
@@ -899,7 +900,7 @@
             <Resource Type="Gold" Amount="300/300/300"/>
         </Cost>
         <Activate>
-            <desc text="每个毗邻建筑获得3/5/7信仰"/>
+            <Desc text="每个毗邻建筑获得3/5/7信仰"/>
             <Effect Type="Connected" BounsType="Faith" BounsCount="3/5/7"/>
         </Activate>
     </Building>
@@ -912,7 +913,7 @@
             <Resource Type="Stone" Amount="0/300/300"/>
         </Cost>
         <Activate>
-            <desc text="每个毗邻建筑获得3/5/7信仰"/>
+            <Desc text="每个毗邻建筑获得3/5/7信仰"/>
             <Effect Type="Adjacent" BounsType="Faith" BounsCount="3/5/7"/>
         </Activate>
     </Building>
