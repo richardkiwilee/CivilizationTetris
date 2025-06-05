@@ -12,6 +12,7 @@ from Tetris.game.terrain import Terrain, ShapeHelper
 import Tetris.protocol.service_pb2 as pb2
 import Tetris.protocol.service_pb2_grpc as rpc
 from Tetris.server import GameStatus
+from Tetris.game.buildings import BuildingFactory
 from enum import Enum
 
 # 配置日志记录器
@@ -99,6 +100,7 @@ PLAYER4_COLOR = (255, 255, 0)
 
 class Client:
     def __init__(self, username: str, address='localhost', port=50051):
+        self.BuildingFactory = BuildingFactory()
         logger.info(f"Initializing client for user: {username}")
         self.username = username
         # 创建 gRPC 通道和存根
@@ -850,9 +852,10 @@ class Client:
         try:
             cell = self.desktop_data[grid_y][grid_x]
             if cell:
+                print(cell)
                 building_id = cell.get('building_id')
                 if building_id is not None:
-                    building_data = BuildingFactory.GetBuildingById(building_id)
+                    building_data = self.BuildingFactory.GetBuildingById(building_id)
                     if building_data and building_data.get('desc'):
                         self.selected_building_desc = building_data['desc']
                         self.selected_building_pos = (grid_x, grid_y)
@@ -1070,9 +1073,10 @@ class Client:
                                 
                                 if is_double_click:
                                     # Try to select building on double click
-                                    cell = self.desktop_data[grid_y][grid_x]
-                                    if cell and cell.get('buildingType'):
-                                        self.select_building_at_pos(grid_x, grid_y)
+                                    if self.desktop_data != []:
+                                        cell = self.desktop_data[grid_y][grid_x]
+                                        if cell and cell.get('building_id'):
+                                            self.select_building_at_pos(grid_x, grid_y)
                                 
                                 # Update last click info
                                 self.last_click_time = current_time
