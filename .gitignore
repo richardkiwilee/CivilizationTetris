@@ -11,4 +11,4 @@ dist
 debug
 .env
 log
-.vscode
+.vscode/
