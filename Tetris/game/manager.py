@@ -306,36 +306,48 @@ class Manager:
                     puzzles.add(adj_puzzle)
         return puzzles
 
+    # TODO: 这里有bug
     def ActiveBuilding(self, player: Player, puzzle: Puzzle):
         if self.Desktop is None:
+            logger.error("Desktop is None")
             return False
         if not self.Accessible(player, puzzle):
+            logger.error(f"Player {player.name} is not accessible to puzzle {puzzle.id}")
             return False
         if puzzle.isBuilding() and player.ResourceEnough(puzzle.activate_cost):
             player.Cost(puzzle.activate_cost)
-            pass
+            logger.info(f"Player {player.name} activated puzzle {puzzle.id} success")
             return True
+        logger.error(f"Player {player.name} does not have enough resources to activate puzzle {puzzle.id}")
         return False
 
     def UpgradeBuilding(self, player: Player, puzzle: Puzzle):
         if self.Desktop is None:
+            logger.error("Desktop is None")
             return False    
         if not self.Accessible(player, puzzle):
+            logger.error(f"Player {player.name} is not accessible to puzzle {puzzle.id}")
             return False
-        if puzzle.isBuilding() and puzzle.building_level < puzzle.max_level:
+        if puzzle.isBuilding() and puzzle.canUpgrade():
             if player.ResourceEnough(puzzle.upgrade_cost):
                 player.Cost(puzzle.upgrade_cost)
                 puzzle.building_level += 1
+                logger.info(f"Player {player.name} upgraded puzzle {puzzle.id} success")
                 return True
+            logger.error(f"Player {player.name} does not have enough resources to upgrade puzzle {puzzle.id}")
+        logger.error(f"Puzzle {puzzle.id} is not a building or is already at max level")
         return False
 
     def Attack(self, player: Player, puzzle: Puzzle):
         if self.Desktop is None:
+            logger.error("Desktop is None")
             return False
         if not self.Accessible(player, puzzle):
+            logger.error(f"Player {player.name} is not accessible to puzzle {puzzle.id}")
             return False
         # 计算攻击对象
         # 计算克制关系
+        logger.info(f"Player {player.name} attacked puzzle {puzzle.id} success")
         pass
 
     def GetDesktopPosition(self, x, y, puzzle: Puzzle, rotate=0):
@@ -383,7 +395,7 @@ class Manager:
             if puzzle.building_id is not None:
                 building = self.BuildingFactory.GetBuildingById(puzzle.building_id)
                 if building is not None:
-                    print(building)
+                    logger.info(f'Place building {building}')
             pass
         else:
             logger.error("Resource not enough")

@@ -132,6 +132,7 @@ class Client:
         self.current_player_name = ""
         self.desktop_data = []
         self.puzzle_objs = {}
+        self.selected_puzzle_id = None
 
         # 初始化字体
         self.small_font = pygame.font.Font(None, 24)  # 24是字体大小
@@ -848,6 +849,7 @@ class Client:
                 print(cell)
                 building_id = cell.get('building_id')
                 puzzle_id = cell.get('puzzle_id')
+                self.selected_puzzle_id = puzzle_id
                 if building_id is not None:
                     building_data = self.BuildingFactory.GetBuildingById(building_id)
                     puzzle_data = self.puzzle_objs.get(str(puzzle_id))
@@ -897,43 +899,19 @@ class Client:
         return False
 
     def activate_building(self):
-        """Activate the currently selected building"""
-        if hasattr(self, 'selected_building_pos'):
-            grid_x, grid_y = self.selected_building_pos
-            try:
-                cell = self.desktop_data[grid_y][grid_x]
-                if cell and cell.get('buildingType'):
-                    self.sendMessage(PlayerAction.Active.value, self.username, str(grid_x), str(grid_y), None, None)
-                    return True
-            except (IndexError, KeyError) as e:
-                logger.error(f"Error activating building: {e}")
-        return False
+        puzzle_id = self.selected_puzzle_id
+        self.sendMessage(PlayerAction.Active.value, self.username, puzzle_id, None, None, None)
+        return True
         
     def upgrade_building(self):
-        """Upgrade the currently selected building"""
-        if hasattr(self, 'selected_building_pos'):
-            grid_x, grid_y = self.selected_building_pos
-            try:
-                cell = self.desktop_data[grid_y][grid_x]
-                if cell and cell.get('buildingType'):
-                    self.sendMessage(PlayerAction.Upgrade.value, self.username, str(grid_x), str(grid_y), None, None)
-                    return True
-            except (IndexError, KeyError) as e:
-                logger.error(f"Error upgrading building: {e}")
-        return False
+        puzzle_id = self.selected_puzzle_id
+        self.sendMessage(PlayerAction.Upgrade.value, self.username, puzzle_id, None, None, None)
+        return True
 
     def attack(self):
-        """Attack the currently selected building"""
-        if hasattr(self, 'selected_building_pos'):
-            grid_x, grid_y = self.selected_building_pos
-            try:
-                cell = self.desktop_data[grid_y][grid_x]
-                if cell and cell.get('buildingType'):
-                    self.sendMessage(PlayerAction.Attack.value, self.username, str(grid_x), str(grid_y), None, None)
-                    return True
-            except (IndexError, KeyError) as e:
-                logger.error(f"Error attacking building: {e}")
-        return False
+        puzzle_id = self.selected_puzzle_id
+        self.sendMessage(PlayerAction.Attack.value, self.username, puzzle_id, None, None, None)
+        return True
 
     def is_mouse_in_grid(self, pos):
         """Check if mouse is in the game grid"""

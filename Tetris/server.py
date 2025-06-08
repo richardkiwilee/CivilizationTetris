@@ -248,24 +248,42 @@ class LobbyServicer(rpc.LobbyServicer):
             if action == PlayerAction.Active.value:
                 player = self.gm.players[sender]
                 puzzle_id = int(body['arg2'])
-                puzzle = player.puzzles[puzzle_id]
-                self.gm.ActiveBuilding(player, puzzle)
+                puzzle = self.gm.puzzle_objs[puzzle_id]
+                _ = self.gm.ActiveBuilding(player, puzzle)
+                if _:
+                    logger.info(f'{sender} activated puzzle {puzzle_id}')
+                else:
+                    logger.error(f'{sender} failed to activate puzzle {puzzle_id}')
                 self._broadcast()
                 return self._response(SystemResponse.OK, resp) 
             
             if action == PlayerAction.Upgrade.value:
+                print('UpgradeBuilding?')
                 player = self.gm.players[sender]
                 puzzle_id = int(body['arg2'])
-                puzzle = player.puzzles[puzzle_id]
-                self.gm.UpgradeBuilding(player, puzzle)
+                print(player)
+                print(puzzle_id)
+                print(player.puzzles)
+                puzzle = self.gm.puzzle_objs[puzzle_id]
+                print(puzzle)
+                print('UpgradeBuilding??')
+                _ = self.gm.UpgradeBuilding(player, puzzle)
+                if _:
+                    logger.info(f'{sender} upgraded puzzle {puzzle_id}')
+                else:
+                    logger.error(f'{sender} failed to upgrade puzzle {puzzle_id}')
                 self._broadcast()
                 return self._response(SystemResponse.OK, resp) 
             
             if action == PlayerAction.Attack.value:
                 player = self.gm.players[sender]
                 puzzle_id = int(body['arg2'])
-                puzzle = player.puzzles[puzzle_id]
-                self.gm.Attack(player, puzzle)
+                puzzle = self.gm.puzzle_objs[puzzle_id]
+                _ = self.gm.Attack(player, puzzle)
+                if _:
+                    logger.info(f'{sender} attacked puzzle {puzzle_id}')
+                else:
+                    logger.error(f'{sender} failed to attack puzzle {puzzle_id}')
                 self._broadcast()
                 return self._response(SystemResponse.OK, resp) 
 

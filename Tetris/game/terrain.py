@@ -170,8 +170,17 @@ class Puzzle:
         self.shape = None   # 形状        
         self.building_id = None   # 建筑id 如果是None则表示这个拼块不是一个建筑
         self.building_level = None   # 建筑等级 如果是None则表示这个拼块不是一个建筑
+        self.building_max_level = None   # 建筑最大等级 如果是None则表示这个拼块不是一个建筑
         self.army = 0   # 军队数量  只有这个拼块是一个建筑的情况下才可用
         self.army_owner = None   # 军队所有者  只有这个拼块是一个建筑的情况下才可用
+
+    def isBuilding(self):
+        return self.building_id is not None
+
+    def canUpgrade(self):
+        if self.building_level is None and self.isBuilding():
+            self.building_level = 0
+        return self.building_level < self.building_max_level
 
     def dump(self):
         ret = dict()
@@ -191,6 +200,8 @@ class Puzzle:
             ret['building_id'] = self.building_id
         if self.building_level:  
             ret['building_level'] = self.building_level
+        if self.building_max_level:  
+            ret['building_max_level'] = self.building_max_level
         if self.army:  
             ret['army'] = self.army
         if self.army_owner:  
@@ -207,6 +218,7 @@ class Puzzle:
         self.rotation = data['rotation'] if 'rotation' in data else None
         self.building_id = data['building_id'] if 'building_id' in data else None
         self.building_level = data['building_level'] if 'building_level' in data else None
+        self.building_max_level = data['building_max_level'] if 'building_max_level' in data else None
         self.army = data['army'] if 'army' in data else 0
         self.army_owner = data['army_owner'] if 'army_owner' in data else None
 
