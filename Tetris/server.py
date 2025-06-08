@@ -246,14 +246,26 @@ class LobbyServicer(rpc.LobbyServicer):
                 return self._response(SystemResponse.OK, resp)
             
             if action == PlayerAction.Active.value:
+                player = self.gm.players[sender]
+                puzzle_id = int(body['arg2'])
+                puzzle = player.puzzles[puzzle_id]
+                self.gm.ActiveBuilding(player, puzzle)
                 self._broadcast()
                 return self._response(SystemResponse.OK, resp) 
             
             if action == PlayerAction.Upgrade.value:
+                player = self.gm.players[sender]
+                puzzle_id = int(body['arg2'])
+                puzzle = player.puzzles[puzzle_id]
+                self.gm.UpgradeBuilding(player, puzzle)
                 self._broadcast()
                 return self._response(SystemResponse.OK, resp) 
             
             if action == PlayerAction.Attack.value:
+                player = self.gm.players[sender]
+                puzzle_id = int(body['arg2'])
+                puzzle = player.puzzles[puzzle_id]
+                self.gm.Attack(player, puzzle)
                 self._broadcast()
                 return self._response(SystemResponse.OK, resp) 
 

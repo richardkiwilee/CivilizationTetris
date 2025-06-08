@@ -306,10 +306,9 @@ class Manager:
                     puzzles.add(adj_puzzle)
         return puzzles
 
-    def ActiveBuilding(self, player: Player, puzzle_id):
+    def ActiveBuilding(self, player: Player, puzzle: Puzzle):
         if self.Desktop is None:
             return False
-        puzzle = self.puzzle_objs.get(puzzle_id)
         if not self.Accessible(player, puzzle):
             return False
         if puzzle.isBuilding() and player.ResourceEnough(puzzle.activate_cost):
@@ -318,10 +317,9 @@ class Manager:
             return True
         return False
 
-    def UpgradeBuilding(self, player: Player, puzzle_id):
+    def UpgradeBuilding(self, player: Player, puzzle: Puzzle):
         if self.Desktop is None:
             return False    
-        puzzle = self.puzzle_objs.get(puzzle_id)
         if not self.Accessible(player, puzzle):
             return False
         if puzzle.isBuilding() and puzzle.building_level < puzzle.max_level:
@@ -331,16 +329,12 @@ class Manager:
                 return True
         return False
 
-    def Attack(self, player, puzzle_id, target_puzzle_id):
+    def Attack(self, player: Player, puzzle: Puzzle):
         if self.Desktop is None:
             return False
-        attacker = self.puzzle_objs.get(puzzle_id)
-        target = self.puzzle_objs.get(target_puzzle_id)
-        if not self.Accessible(player, attacker):
+        if not self.Accessible(player, puzzle):
             return False
-        if attacker is None or target is None:
-            return False
-        # 计算进攻路线
+        # 计算攻击对象
         # 计算克制关系
         pass
 

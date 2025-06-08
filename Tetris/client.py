@@ -143,7 +143,7 @@ class Client:
         ]
         
         # Action buttons setup
-        button_width = (TOP_MARGIN_INFO_WIDTH - 3 * BUTTON_MARGIN) // 2
+        button_width = (TOP_MARGIN_INFO_WIDTH - 4 * BUTTON_MARGIN) // 3  # 将宽度平均分成3份
         button_y = TOP_MARGIN_DESC_HEIGHT + (TOP_MARGIN_BUTTON_HEIGHT - BUTTON_HEIGHT) // 2
         
         # Activate building button
@@ -161,8 +161,16 @@ class Client:
             'rect': pygame.Rect(button_x, button_y, button_width, BUTTON_HEIGHT),
             'enabled': False
         }
+
+        # Attack button
+        button_x = TOP_MARGIN_SQUARE_WIDTH + 3 * BUTTON_MARGIN + 2 * button_width
+        attack_button = {
+            'text': '发动攻击',
+            'rect': pygame.Rect(button_x, button_y, button_width, BUTTON_HEIGHT),
+            'enabled': False
+        }
         
-        self.action_buttons = [activate_button, upgrade_button]
+        self.action_buttons = [activate_button, upgrade_button, attack_button]
         self.last_click_time = 0  # For tracking double clicks
         self.last_click_pos = None
         
@@ -749,19 +757,25 @@ class Client:
                         self.sendMessage(PlayerAction.ChangeCard.value, self.username, None, None, None, None)
                     elif button['text'] == '结束回合':
                         self.sendMessage(PlayerAction.EndTurn.value, self.username, None, None, None, None)
+                    elif button['text'] == '发动攻击':
+                        self.sendMessage(PlayerAction.Attack.value, self.username, None, None, None, None)
                 return True
         
         # Check action buttons
         for button in self.action_buttons:
             if button['rect'].collidepoint(pos) and button['enabled']:
                 if button['text'] == '激活建筑':
-                    # Handle activate building
+                    logger.debug('激活建筑')
                     if hasattr(self, 'selected_building_pos'):
                         self.activate_building()
                 elif button['text'] == '升级建筑':
-                    # Handle upgrade building
+                    logger.debug('升级建筑')
                     if hasattr(self, 'selected_building_pos'):
                         self.upgrade_building()
+                elif button['text'] == '发动攻击':
+                    logger.debug('发动攻击')
+                    if hasattr(self, 'selected_building_pos'):
+                        self.attack()
                 return True
         return False
 
@@ -889,7 +903,7 @@ class Client:
             try:
                 cell = self.desktop_data[grid_y][grid_x]
                 if cell and cell.get('buildingType'):
-                    self.sendMessage(PlayerAction.ActivateBuilding.value, self.username, str(grid_x), str(grid_y), None, None)
+                    self.sendMessage(PlayerAction.Active.value, self.username, str(grid_x), str(grid_y), None, None)
                     return True
             except (IndexError, KeyError) as e:
                 logger.error(f"Error activating building: {e}")
@@ -902,10 +916,23 @@ class Client:
             try:
                 cell = self.desktop_data[grid_y][grid_x]
                 if cell and cell.get('buildingType'):
-                    self.sendMessage(PlayerAction.UpgradeBuilding.value, self.username, str(grid_x), str(grid_y), None, None)
+                    self.sendMessage(PlayerAction.Upgrade.value, self.username, str(grid_x), str(grid_y), None, None)
                     return True
             except (IndexError, KeyError) as e:
                 logger.error(f"Error upgrading building: {e}")
+        return False
+
+    def attack(self):
+        """Attack the currently selected building"""
+        if hasattr(self, 'selected_building_pos'):
+            grid_x, grid_y = self.selected_building_pos
+            try:
+                cell = self.desktop_data[grid_y][grid_x]
+                if cell and cell.get('buildingType'):
+                    self.sendMessage(PlayerAction.Attack.value, self.username, str(grid_x), str(grid_y), None, None)
+                    return True
+            except (IndexError, KeyError) as e:
+                logger.error(f"Error attacking building: {e}")
         return False
 
     def is_mouse_in_grid(self, pos):
