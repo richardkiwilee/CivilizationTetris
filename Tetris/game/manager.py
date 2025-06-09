@@ -307,6 +307,15 @@ class Manager:
         return puzzles
 
     # TODO: 这里有bug
+    """ 
+    在战斗逻辑上具有不公平性
+    1. 玩家指定进攻目标
+    2. 自动计算最近的目标
+    3. 兵力可以自由移动，不拘泥于建筑
+    4. 兵力移动的速度
+    考虑以上几点 防守方都具有相当大的优势 缺少博弈且很难让回合数在预期区间 
+    放置地块阶段与战斗阶段也割裂
+    """
     def ActiveBuilding(self, player: Player, puzzle: Puzzle):
         if self.Desktop is None:
             logger.error("Desktop is None")
